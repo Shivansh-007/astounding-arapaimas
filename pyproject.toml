@@ -1,0 +1,30 @@
+[tool.poetry]
+name = "astounding-arapaimas"
+version = "0.1.0"
+description = "To be updated!"
+authors = ["Shivansh-007 <shivansh-007@outlook.com>"]
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+
+[tool.poetry.dev-dependencies]
+flake8 = "^3.8"
+flake8-annotations = "^2.3"
+flake8-bugbear = "^21.4.3"
+flake8-docstrings = "^1.5"
+flake8-import-order = "^0.18"
+flake8-string-format = "^0.3"
+flake8-tidy-imports = "^4.1"
+flake8-todo = "^0.7"
+pep8-naming = "^0.11"
+pre-commit = "^2.1"
+taskipy = "^1.8.1"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.taskipy.tasks]
+lint = "pre-commit run --all-files"
+precommit = "pre-commit install"
