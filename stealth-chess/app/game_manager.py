@@ -1,3 +1,11 @@
+class Player:
+    """Class for defining a player."""
+
+    def __init__(self, player_id: str):
+        self.id = player_id
+        self.game_history = None  # stores the result of the previous games
+
+
 class Game:
     """
     Main class of the project.
