@@ -12,19 +12,20 @@ class ChessBoard:
         self.board = Game(self.FEN)
 
     def give_board(self) -> str:
-        """returns the board in."""
+        """Returns the board in."""
         return self.board.get_fen()
 
     def all_available_moves(self) -> list:
+        """Returns all moves that each piece of a player can make."""
         return self.board.get_moves()
 
     def move_piece(self, move: str) -> Optional[int]:
-        """function to apply a move defined in simple algebraic notation like a1b1."""
+        """Function to apply a move defined in simple algebraic notation like a1b1."""
         try:
             self.board.apply_move(move)
         except Chessnut.game.InvalidMove:
             return -1
 
-    def reset(self):
-        """reset the board to initial position."""
+    def reset(self) -> None:
+        """Reset the board to initial position."""
         self.board.reset()
