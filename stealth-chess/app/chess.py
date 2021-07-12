@@ -5,7 +5,7 @@ from Chessnut import Game
 
 
 class ChessBoard:
-    """default class for chess board game."""
+    """Base class for chess board game."""
 
     def __init__(self, fen: str):
         self.FEN = fen  # will be given by server when multiplayer is added
