@@ -7,10 +7,11 @@ exclude=__pycache__,.cache,
         .git,
         .md,.svg,.png
         venv,.venv,
-        .json
+        .json,
+        api/alembic/versions/*
 
 ignore=
-    B311,W503,E226,S311,T000
+    B008, B311,W503,E226,S311,T000
     # Missing Docstrings
     D100,D104,D105,D107,
     # Docstring Whitespace

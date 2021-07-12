@@ -7,11 +7,13 @@ from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from api.constants import Server
+from api.endpoints import auth
 
 log = logging.getLogger(__name__)
 
 app = FastAPI(docs_url=None, redoc_url=None)
 
+app.include_router(router=auth.router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
