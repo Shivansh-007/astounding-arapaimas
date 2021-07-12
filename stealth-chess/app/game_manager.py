@@ -35,9 +35,8 @@ class Game:
         """Prints the screen to choose to play online or offline."""
         pass
 
-    def print_game_screen(self) -> None:
-        """Prints the chess board."""
-        """ that follows all rules of the game and the time taken for a turn"""
+    def show_game_screen(self) -> None:
+        """Shows the chess board."""
         pass
 
     def start_game(self) -> int:
