@@ -1,7 +1,9 @@
-from typing import Optional
+import logging
 
 import Chessnut
 from Chessnut import Game
+
+logger = logging.getLogger(__name__)
 
 
 class ChessBoard:
@@ -19,13 +21,15 @@ class ChessBoard:
         """Returns all moves that each piece of a player can make."""
         return self.board.get_moves()
 
-    def move_piece(self, move: str) -> Optional[int]:
+    def move_piece(self, move: str) -> None:
         """Function to apply a move defined in simple algebraic notation like a1b1."""
         try:
             self.board.apply_move(move)
         except Chessnut.game.InvalidMove:
-            return -1
+            logger.debug(f"Invalid move made {move}")
+            raise
 
     def reset(self) -> None:
         """Reset the board to initial position."""
         self.board.reset()
+        logger.info("Resetting the Board")
