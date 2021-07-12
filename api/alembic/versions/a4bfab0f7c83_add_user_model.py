@@ -22,6 +22,7 @@ def upgrade() -> None:
         sqlalchemy.Column(
             "user_id", sqlalchemy.BigInteger, primary_key=True, unique=True
         ),
+        sqlalchemy.Column("username", sqlalchemy.String),
         sqlalchemy.Column("token_salt", sqlalchemy.String),
         sqlalchemy.Column("is_staff", sqlalchemy.Boolean),
         sqlalchemy.Column("is_banned", sqlalchemy.Boolean),

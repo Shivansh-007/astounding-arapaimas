@@ -26,6 +26,7 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         """Make a new user object, and add it to the database."""
         db_obj = User(
             user_id=obj_in.user_id,
+            username=obj_in.username,
             token_salt=obj_in.token_salt,
             is_staff=obj_in.is_staff,
         )

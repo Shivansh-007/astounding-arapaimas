@@ -71,9 +71,9 @@ async def auth_callback(request: Request) -> Response:
             ).json()
             auth_header = {"Authorization": f"Bearer {auth_token['access_token']}"}
             user = (await client.get(Discord.USER_URL, headers=auth_header)).json()
-            token = await auth.reset_user_token(user["id"])
+            token = await auth.reset_user_token(user["id"], user["username"])
     except KeyError:
-        # Ensure that users don't land on the show_pixel page
+        # Ensure that users don't land on the show_token page
         log.error(traceback.format_exc())
         raise HTTPException(401, "Unknown error while creating token")
     except PermissionError:

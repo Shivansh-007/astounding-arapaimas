@@ -8,6 +8,7 @@ class User(Base):
     """A user as used by the API."""
 
     user_id = Column(BigInteger, primary_key=True, unique=True)
+    username = Column(String)
     token_salt = Column(String, default="")
     is_staff = Column(Boolean, default=False)
     is_banned = Column(Boolean, default=False)

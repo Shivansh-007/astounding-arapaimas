@@ -49,7 +49,7 @@ class JWTBearer(HTTPBearer):
 
 
 async def reset_user_token(
-    user_id: str, db: t.Optional[Session] = next(get_db())
+    user_id: str, username: str, db: t.Optional[Session] = next(get_db())
 ) -> str:
     """
     Ensure a user exists and create a new token for them.
@@ -68,7 +68,10 @@ async def reset_user_token(
         user.create(
             db,
             obj_in=UserCreate(
-                user_id=int(user_id), token_salt=token_salt, is_banned=False
+                user_id=int(user_id),
+                username=username,
+                token_salt=token_salt,
+                is_banned=False,
             ),
         )
 
