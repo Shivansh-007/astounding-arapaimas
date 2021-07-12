@@ -14,7 +14,7 @@ class ChessBoard:
         self.board = Game(self.FEN)
 
     def give_board(self) -> str:
-        """Returns the board in."""
+        """Returns the board in FEN representation."""
         return self.board.get_fen()
 
     def all_available_moves(self) -> list:
@@ -27,6 +27,14 @@ class ChessBoard:
             self.board.apply_move(move)
         except Chessnut.game.InvalidMove:
             logger.debug(f"Invalid move made {move}")
+            raise
+
+    def set_fen(self, fen: str) -> None:
+        """Function to set the board everytime server returns a new FEN."""
+        try:
+            self.board.set_fen(fen)
+        except Exception:
+            logger.debug("Invalid FEN representation. Skipping..")
             raise
 
     def reset(self) -> None:
