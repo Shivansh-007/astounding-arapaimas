@@ -39,3 +39,19 @@ The API is configured through the following environment variables:
   `INFO`. When testing, defaults to `ERROR`. Otherwise, defaults to `WARN`.
 
 - **`JWT_SECRET`**: A 32 byte (64 digit hex string) secret for encoding tokens. Any value can be used.
+
+### **3. Run The API**
+The project can be started by running it directly on your system.The environment variables shown in a previous section need to have been configured.
+
+- **Database**
+
+    First, start the PostgreSQL database.
+    Note that this can still be done with Docker even if the webserver will be running on the host - simply adjust the `DATABASE_URL` environment variable accordingly.
+
+- **Webserver**
+
+    Starting the webserver is done simply through poetry:
+
+    ```shell
+    poetry run task start
+    ```
