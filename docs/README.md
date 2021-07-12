@@ -6,4 +6,5 @@ This directory contains useful documentation for working with and using our TUI 
 
 * [Setup guide](setup.md)
 
-  * [To be updated](setup.md#aaaaAAAA)
+  * [API Setup](setup.md#API-Setup)
+  * [Run The API](setup.md#Run-The-API)

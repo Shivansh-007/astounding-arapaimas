@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Astounding Arapaimas Chess • API Token{% endblock %}
+{% block head %}
+<script type="text/javascript">
+    function copyToClipboard()
+    {
+        navigator.clipboard.writeText( '{{ token }}' );
+        let elem = document.getElementById( "api-token" );
+        elem.focus();
+        elem.select();
+        elem.setSelectionRange( 0, 99999 ); /* For mobile devices */
+    }
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="main-box">
+    <div class="header-box">
+        <div class="header-content">
+            <h1>API Token</h1>
+            <p>Keep it safe :D</p>
+        </div>
+    </div>
+    <div class="content-box">
+        <h2>API token:</h2>
+        <div id="token-div" onclick="copyToClipboard()">
+            <input type="text" id="api-token" value="{{  token  }}" readonly>
+            <button id="token-button"><span>Copy</span></button>
+        </div>
+        <div style="height: 25px"></div>
+    </div>
+</div>
+{% endblock %}
