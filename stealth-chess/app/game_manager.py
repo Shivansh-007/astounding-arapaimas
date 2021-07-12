@@ -1,12 +1,12 @@
 class Game:
-    """Main class of the project."""
-
     """
+    Main class of the project.
+
     That will handle :-
-    the menus
-    connection with the server
-    printing of the chessboard
-    turns of players when playing locally
+       - the menus
+       - connection with the server
+       - printing of the chessboard
+       - turns of players when playing locally
     """
 
     def __init__(self):
