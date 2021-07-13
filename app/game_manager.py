@@ -1,44 +1,9 @@
 import sys
-from copy import deepcopy
 
 import ascii_art
 from blessed import Terminal
 
 term = Terminal()
-
-PIECES = "".join(chr(9812 + x) for x in range(12))
-print(PIECES)
-ROW = ("A", "B", "C", "D", "E", "F", "G", "H")
-COL = tuple(map(str, range(1, 9)))
-
-# rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR
-initial_game = [
-    ["r", "n", "b", "q", "k", "b", "n", "r"],
-    ["p"] * 8,
-    ["em"] * 8,
-    ["em"] * 8,
-    ["em"] * 8,
-    ["em"] * 8,
-    ["P"] * 8,
-    ["R", "N", "B", "Q", "K", "B", "N", "R"],
-]
-
-
-mapper = {
-    "em": ("", "white"),
-    "k": (PIECES[0], "white"),
-    "q": (PIECES[1], "white"),
-    "r": (PIECES[2], "white"),
-    "b": (PIECES[3], "white"),
-    "n": (PIECES[4], "white"),
-    "p": (PIECES[5], "white"),
-    "K": (PIECES[6], "black"),
-    "Q": (PIECES[7], "black"),
-    "R": (PIECES[8], "black"),
-    "B": (PIECES[9], "black"),
-    "N": (PIECES[10], "black"),
-    "P": (PIECES[11], "black"),
-}
 
 
 class Player:
@@ -61,31 +26,89 @@ class Game:
     """
 
     def __init__(self):
-        self.term = Terminal()
         self.players = None
         self.game_id = None  # the game lobby id that the server will provide for online multiplayer
         self.server_ip = None
-        self.chess_board = deepcopy(initial_game)
-        self.tile_width = 6
-        self.tile_height = 3
-        self.offset_x = 0
-        self.offset_y = 0
-        self.x = 0
-        self.y = 0
-        # self.my_color = 'white' # for future
-        self.white_move = True  # this will chnage in multiplayer game
-
-    # TODO:: IS THIS NEEDED?
-    def __len__(self) -> int:
-        return 8
+        self.chess_board = None
+        self.term = Terminal()
 
     def create_lobby(self) -> int:
         """Used to create a game lobby on the server or locally."""
         pass
 
-    def show_welcome_screen(self) -> None:
-        """Prints startup screen."""
-        pass
+    def show_welcome_screen(self) -> str:
+        """Prints startup screen and return pressed key."""
+        with self.term.cbreak(), self.term.hidden_cursor():
+            print(self.term.home + self.term.white_on_black + self.term.clear)
+            # draw bottom chess pieces
+            sequence = (
+                ascii_art.PAWN,
+                ascii_art.ROOK,
+                ascii_art.KNIGHT,
+                ascii_art.BISHOP,
+                ascii_art.QUEEN,
+                ascii_art.KING,
+                ascii_art.BISHOP,
+                ascii_art.KNIGHT,
+                ascii_art.ROOK,
+                ascii_art.PAWN,
+            )
+            padding = (
+                self.term.width
+                - sum(max(len(p) for p in piece.split("\n")) for piece in sequence)
+            ) // 2
+            position = 0
+            for piece in sequence:
+                for i, val in enumerate(piece.split("\n")):
+                    with self.term.location(
+                        padding + position,
+                        self.term.height - (len(piece.split("\n")) + 1) + i,
+                    ):
+                        print(self.term.green_on_black(val))
+                position += max(len(p) for p in piece.split("\n"))
+
+            # draw top chess pieces
+            sequence = (
+                ascii_art.PAWN_I,
+                ascii_art.ROOK_I,
+                ascii_art.KNIGHT_I,
+                ascii_art.BISHOP_I,
+                ascii_art.QUEEN_I,
+                ascii_art.KING_I,
+                ascii_art.BISHOP_I,
+                ascii_art.KNIGHT_I,
+                ascii_art.ROOK_I,
+                ascii_art.PAWN_I,
+            )
+            position = 0
+            for piece in sequence:
+                for i, val in enumerate(piece.split("\n")):
+                    with self.term.location(padding + position, 1 + i):
+                        print(self.term.red_on_black(val))
+                position += max(len(p) for p in piece.split("\n"))
+
+            # draw side characters
+            for i, char in enumerate(ascii_art.FEN[: self.term.height - 2]):
+                with self.term.location(0, 1 + i):
+                    print(self.term.grey30_on_black(char))
+                with self.term.location(self.term.width, 1 + i):
+                    print(self.term.grey30_on_black(char))
+
+            # draw box center message
+            message = "PRESS ANY KEY TO START"
+            padding = (self.term.width - len(message)) // 2
+            with self.term.location(padding, self.term.height // 2):
+                print(self.term.blink_white_on_black(message))
+
+            # draw THINK box
+            padding = (self.term.width - len(ascii_art.THINK.split("\n")[0])) // 2
+            for i, val in enumerate(ascii_art.THINK.split("\n")):
+                with self.term.location(
+                    5, self.term.height - len(ascii_art.THINK.split("\n")) + i
+                ):
+                    print(self.term.grey10_bold_on_black(val))
+            keypress = self.term.inkey()
+            return keypress
 
     def show_game_menu(self) -> None:
         """Prints the game-menu screen."""
@@ -216,74 +239,11 @@ class Game:
 
     def show_game_screen(self) -> None:
         """Shows the chess board."""
-        print(self.term.fullscreen())
-        print(self.term.home + self.term.clear)
-        for j in range(len(self)):
-            # for every col we need to add number too!
-            num = len(self) - j
-            x = self.tile_width // 2
-            y = j * self.tile_height + self.tile_height // 2
-            with self.term.location(x, y):
-                print(num)
-            for i in range(len(self)):
-                if (i + j) % 2 == 0:
-                    bg = "blue"
-                else:
-                    bg = "green"
-                piece, color = mapper[self.chess_board[j][i]]
-                self.draw_tile(
-                    x * 2 + i * (self.tile_width + self.offset_x),
-                    j * (self.tile_height + self.offset_y),
-                    text=piece,
-                    fg=color,
-                    bg=bg,
-                )
-        for i in range(len(self)):
-            with self.term.location(
-                x * 2 - 1 + i * self.tile_width, len(self) * self.tile_height
-            ):
-                print(str.center(ROW[i], len(self)))
-        print(self.term.move_y(self.term.height - 4))
+        pass
 
-    def start_game(self) -> int:
+    def start_game(self) -> None:
         """Starts the chess game."""
-        while True:
-            self.show_game_screen()
-            if self.white_move:
-                print(
-                    self.term.black_on_blue(
-                        self.term.center("Which piece you want to play white?")
-                    )
-                )
-            else:
-                print(
-                    self.term.black_on_blue(
-                        self.term.center("Which piece you want to play black?")
-                    )
-                )
-            # with self.term.cbreak():
-            inp = input()
-            # print(inp)
-            # TODO:: VALIDATION
-            row = ROW.index(inp[0].upper())
-            col = len(self) - int(inp[1])
-            # TODO:: VALIDATION
-            if self.chess_board[row][col] != "em":
-                inp2 = input()
-                if inp == inp2:
-                    print("LOL try again!")
-                    continue
-                # TODO:: VALIDATION
-                row2 = ROW.index(inp2[0].upper())
-                col2 = len(self) - int(inp2[1])
-                print(row, col, row2, col2)
-                piece = self.chess_board[row][col]
-                self.chess_board[row][col] = "em"
-                self.chess_board[row2][col2] = piece
-                # TODO:: UPDATE VIEW
-            else:
-                print("Invalid move")
-        return 1
+        pass
 
 
 game = Game()
