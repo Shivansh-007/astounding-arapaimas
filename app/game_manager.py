@@ -113,7 +113,7 @@ class Game:
         """Prints the game-menu screen."""
 
         def print_options() -> None:
-            for i, option in enumerate(options):
+            for i, option in enumerate(options):  # updates the options
                 if i == self.curr_highlight and i != 3:
                     print(
                         self.term.move_x(term_positions[i])
@@ -172,13 +172,13 @@ class Game:
                     + self.term.move_x(0)
                 )
 
-        def select_option() -> None:
+        def select_option() -> None:  # updates the highlighter variable
             if self.curr_highlight < 3:
                 self.curr_highlight += 1
             else:
                 self.curr_highlight = 0
 
-        def next() -> None:
+        def next() -> None:  # Executes the selected option
             if not self.curr_highlight:
                 print(
                     "Created a new game"
@@ -201,20 +201,24 @@ class Game:
         self.curr_highlight = 9
         term_positions = [int(w * 0.38), int(w * 0.46), int(w * 0.54), int(w * 0.62)]
 
-        title_split = ascii_art.TITLE.split("\n")
+        title_split = ascii_art.menu_logo.split("\n")
+        max_chars = len(max(title_split, key=len))
         with self.term.fullscreen(), self.term.cbreak():
-            print(self.term.home + self.term.clear + self.term.move_y(int(h * 0.20)))
-            for component in title_split:
+            print(self.term.home + self.term.clear + self.term.move_y(int(h * 0.10)))
+            for component in title_split:  # Prints centered title
+                component = str(component) + " " * (max_chars - len(component))
                 print(self.term.center(component))
-            print(self.term.home + self.term.move_y(int(h * 0.60)))
+            print(
+                self.term.home + self.term.move_y(int(h * 0.70))
+            )  # Sets the cursor to the options position
             print_options()
             pressed = ""
-            while pressed != "KEY_ENTER":
+            while pressed != "KEY_ENTER":  # Loops till the user chooses an option
                 pressed = self.term.inkey().name
                 if pressed == "KEY_TAB":
                     select_option()
                     print_options()
-        print(self.term.home + self.term.clear)
+        print(self.term.home + self.term.clear)  # Resets the terminal
         next()
 
     def show_game_screen(self) -> None:
@@ -224,3 +228,7 @@ class Game:
     def start_game(self) -> None:
         """Starts the chess game."""
         pass
+
+
+game = Game()
+game.show_game_menu()
