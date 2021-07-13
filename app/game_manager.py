@@ -1,6 +1,8 @@
 from blessed import Terminal
 
-pieces = "".join(chr(9812 + x) for x in range(12))
+PIECES = "".join(chr(9812 + x) for x in range(12))
+ROW = ["A", "B", "C", "D", "E", "F", "G", "H"]
+COL = list(map(str, range(1, 9)))
 
 
 class Player:
@@ -75,6 +77,12 @@ class Game:
         print(self.term.fullscreen())
         print(self.term.home + self.term.clear)
         for j in range(len(self)):
+            # for every col we need to add number too!
+            num = len(self) - j
+            x = self.tile_width // 2
+            y = j * self.tile_height + self.tile_height // 2
+            with self.term.location(x, y):
+                print(num)
             for i in range(len(self)):
                 if (i + j) % 2 == 0:
                     fg = "black"
@@ -83,15 +91,19 @@ class Game:
                     fg = "white"
                     bg = "green"
                 self.draw_tile(
-                    i * (self.tile_width + self.offset_x),
+                    x * 2 + i * (self.tile_width + self.offset_x),
                     j * (self.tile_height + self.offset_y),
-                    text=pieces[0],
+                    text=PIECES[0],
                     fg=fg,
                     bg=bg,
                 )
-
-        # print(term.move_down)
-        # print(term.move_down(2) + 'You pressed ' + term.bold(repr(inp)))
+        for i in range(len(self)):
+            with self.term.location(
+                x * 2 + i * self.tile_width, len(self) * self.tile_height
+            ):
+                print(str.center(ROW[i], len(self)))
+        print(self.term.move_y(self.term.height - 4))
+        print(self.term.black_on_blue(self.term.center("press the move")))
 
     def start_game(self) -> int:
         """Starts the chess game."""
