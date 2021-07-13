@@ -3,6 +3,10 @@ from app.game_manager import Game
 if "__main__" == __name__:
     game = Game()
     try:
+        with game.term.fullscreen():
+            # clear the second buffer screen
+            print(game.term.home + game.term.clear)
+
         print(game.term.enter_fullscreen)
         # Enter full screen once
         game.start_game()
