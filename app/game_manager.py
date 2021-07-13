@@ -195,7 +195,7 @@ class Game:
         brief = [
             "Creates an new game and waits for an opponent to join",
             "Join a pre-existing game of your choice",
-            "Change your game settings",
+            "Change game settings",
             "Exit the game",
         ]
         self.curr_highlight = 9
