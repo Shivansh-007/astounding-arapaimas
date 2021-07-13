@@ -208,9 +208,7 @@ class Game:
             for component in title_split:  # Prints centered title
                 component = str(component) + " " * (max_chars - len(component))
                 print(self.term.center(component))
-            print(
-                self.term.home + self.term.move_y(int(h * 0.70))
-            )  # Sets the cursor to the options position
+            print(self.term.move_down(3))  # Sets the cursor to the options position
             print_options()
             pressed = ""
             while pressed != "KEY_ENTER":  # Loops till the user chooses an option
@@ -228,7 +226,3 @@ class Game:
     def start_game(self) -> None:
         """Starts the chess game."""
         pass
-
-
-game = Game()
-game.show_game_menu()
