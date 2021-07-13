@@ -1,8 +1,8 @@
-from copy import deepcopy
-from blessed import Terminal
-
-import menu_helper    
 import sys
+from copy import deepcopy
+
+import menu_helper
+from blessed import Terminal
 
 
 helper = menu_helper.Helper()
@@ -92,62 +92,112 @@ class Game:
     def show_game_menu(self) -> None:
         """Prints the game-menu screen."""
 
-        def print_options():
-            for i,option in enumerate(options):
-                if i == curr_highlight and i != 3: 
-                    print(term.move_x(term_positions[i])+ term.underline_bold_white_on_green + str(option) + term.normal+ term.move_x(0), end="")
+        def print_options() -> None:
+            for i, option in enumerate(options):
+                if i == curr_highlight and i != 3:
+                    print(
+                        term.move_x(term_positions[i])
+                        + term.underline_bold_white_on_green
+                        + str(option)
+                        + term.normal
+                        + term.move_x(0),
+                        end="",
+                    )
                 elif i == curr_highlight and i == 3:
-                    print(term.move_x(term_positions[i])+ term.underline_bold_white_on_red + str(option) + term.normal+ term.move_x(0), end="")
+                    print(
+                        term.move_x(term_positions[i])
+                        + term.underline_bold_white_on_red
+                        + str(option)
+                        + term.normal
+                        + term.move_x(0),
+                        end="",
+                    )
                 elif i == 3:
-                    print(term.move_x(term_positions[i])+ term.bold_red+str(option)+term.normal+ term.move_x(0), end="")
+                    print(
+                        term.move_x(term_positions[i])
+                        + term.bold_red
+                        + str(option)
+                        + term.normal
+                        + term.move_x(0),
+                        end="",
+                    )
                 else:
-                    print(term.move_x(term_positions[i])+ term.bold_green+str(option)+ term.move_x(0), end="")
+                    print(
+                        term.move_x(term_positions[i])
+                        + term.bold_green
+                        + str(option)
+                        + term.move_x(0),
+                        end="",
+                    )
                 sys.stdout.flush()
             if curr_highlight != 9:
-                print(term.move_down(3)+term.green+term.center(brief[curr_highlight])+term.move_x(0) +'\n\n'+term.white+term.center('Press [ENTER] to confirm') + term.move_up(5), end = "")
+                print(
+                    term.move_down(3)
+                    + term.green
+                    + term.center(brief[curr_highlight])
+                    + term.move_x(0)
+                    + "\n\n"
+                    + term.white
+                    + term.center("Press [ENTER] to confirm")
+                    + term.move_up(5),
+                    end="",
+                )
             else:
-                print(term.move_down(3)+term.white+term.center('Press [TAB] for option selection') +term.normal+ term.move_up(4)+term.move_x(0))
+                print(
+                    term.move_down(3)
+                    + term.white
+                    + term.center("Press [TAB] for option selection")
+                    + term.normal
+                    + term.move_up(4)
+                    + term.move_x(0)
+                )
 
-        def select_option():
+        def select_option() -> None:
             global curr_highlight
             if curr_highlight < 3:
                 curr_highlight += 1
             else:
                 curr_highlight = 0
 
-        def next():
+        def next() -> None:
             if not curr_highlight:
-                print('Created a new game') #Executes something when 'Create Game' is called
+                print(
+                    "Created a new game"
+                )  # Executes something when 'Create Game' is called
             elif curr_highlight == 1:
-                pass  #Link to the actual game when selected
+                pass  # Link to the actual game when selected
             elif curr_highlight == 2:
-                print('Settings Selected') #Link to settings file to access settings
+                print("Settings Selected")  # Link to settings file to access settings
             else:
-                print('Exited the game')
+                print("Exited the game")
 
-        w,h = term.width, term.height
-        options = [' Create Game ', ' Join Game ', ' Settings ', ' Exit ']
-        brief = ['Creates an new game and waits for an opponent to join','Join a pre-existing game of your choice','Change your game settings','Exit the game']
-        global curr_highlight 
+        w, h = term.width, term.height
+        options = [" Create Game ", " Join Game ", " Settings ", " Exit "]
+        brief = [
+            "Creates an new game and waits for an opponent to join",
+            "Join a pre-existing game of your choice",
+            "Change your game settings",
+            "Exit the game",
+        ]
+        global curr_highlight
         curr_highlight = 9
-        term_positions = [int(w*0.38),int(w*0.46),int(w*0.54),int(w*0.62)]
+        term_positions = [int(w * 0.38), int(w * 0.46), int(w * 0.54), int(w * 0.62)]
 
         title_split = helper.title.split("\n")
         with term.fullscreen(), term.cbreak():
-            print(term.home + term.clear + term.move_y(int(h*.30))) 
-            for component in title_split:     
+            print(term.home + term.clear + term.move_y(int(h * 0.30)))
+            for component in title_split:
                 print(term.center(component))
-            print(term.home + term.move_y(int(h*.60)))
+            print(term.home + term.move_y(int(h * 0.60)))
             print_options()
-            pressed = ''
-            while pressed != 'KEY_ENTER':
+            pressed = ""
+            while pressed != "KEY_ENTER":
                 pressed = term.inkey().name
-                if pressed == 'KEY_TAB':    
-                    select_option() 
+                if pressed == "KEY_TAB":
+                    select_option()
                     print_options()
-        print(term.home+term.clear)
+        print(term.home + term.clear)
         next()
-
 
     def draw_tile(
         self,
