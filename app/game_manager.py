@@ -117,7 +117,7 @@ class Game:
                 if i == self.curr_highlight and i != 3:
                     print(
                         self.term.move_x(term_positions[i])
-                        + self.term.underline_bold_white_on_green
+                        + self.term.bold_white_on_green
                         + str(option)
                         + self.term.normal
                         + self.term.move_x(0),
@@ -126,7 +126,7 @@ class Game:
                 elif i == self.curr_highlight and i == 3:
                     print(
                         self.term.move_x(term_positions[i])
-                        + self.term.underline_bold_white_on_red
+                        + self.term.bold_white_on_red
                         + str(option)
                         + self.term.normal
                         + self.term.move_x(0),
@@ -201,9 +201,9 @@ class Game:
         self.curr_highlight = 9
         term_positions = [int(w * 0.38), int(w * 0.46), int(w * 0.54), int(w * 0.62)]
 
-        title_split = ascii_art.menu_logo.split("\n")
+        title_split = ascii_art.menu_logo.strip().split("\n")
         max_chars = len(max(title_split, key=len))
-        with self.term.fullscreen(), self.term.cbreak():
+        with self.term.fullscreen(), self.term.cbreak(), self.term.hidden_cursor():
             print(self.term.home + self.term.clear + self.term.move_y(int(h * 0.10)))
             for component in title_split:  # Prints centered title
                 component = str(component) + " " * (max_chars - len(component))
