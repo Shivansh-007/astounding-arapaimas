@@ -9,7 +9,7 @@ helper = menu_helper.Helper()
 term = Terminal()
 
 w,h = term.width, term.height
-options = ['Create Game', 'Join Game', 'Settings', 'Exit']
+options = ['\tCreate Game\t', '\tJoin Game\t', '\tSettings\t', '\tExit\t']
 brief = ['Creates an new game and waits for an opponent to join','Join a pre-existing game of your choice','Change your game settings','Exit the game']
 curr_highlight = 0
 term_positions = [int(w*0.38),int(w*0.46),int(w*0.54),int(w*0.62)]
