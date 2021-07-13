@@ -73,7 +73,7 @@ class Game:
     def show_game_screen(self) -> None:
         """Shows the chess board."""
         print(self.term.fullscreen())
-        print(self.term.home + self.term.clear)
+        print(self.term.home + self.term.clear + self.term.move_y(70))
         for j in range(len(self)):
             for i in range(len(self)):
                 if (i + j) % 2 == 0:
