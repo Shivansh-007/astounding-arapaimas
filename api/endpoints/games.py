@@ -5,8 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy.orm import Session
 
 from api.crud import game
-from api.endpoints import get_db
 from api.schemas import game
+from api.endpoints import get_db
 from api.utils import auth
 
 log = logging.getLogger(__name__)
@@ -16,8 +16,7 @@ router = APIRouter(tags=["Game Endpoints"], dependencies=[Depends(auth.JWTBearer
 @router.get("/new", response_class=Response)
 async def new_game(request: Request, db: Session = Depends(get_db)) -> Response:
     """Create a new game object and web socket thread for that game."""
-    from api.main import socket_manager as sm
-
+    sm = request.app.socket_manager
     user_id = await auth.JWTBearer().get_user_by_token(request)
     game_id = f"{str(user_id)}{str(datetime.now().timestamp)}"
 
@@ -37,7 +36,7 @@ async def join_game(
     request: Request, game_id: int, db: Session = Depends(get_db)
 ) -> Response:
     """Join the current user to the game with id `game_id` and its socket.io room."""
-    from api.main import socket_manager as sm
+    sm = request.app.socket_manager
 
     user_id = await auth.JWTBearer().get_user_by_token(request)
     response = game.set_player_two(db, game_id=game_id, user_id=user_id)
