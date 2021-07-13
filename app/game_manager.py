@@ -224,5 +224,14 @@ class Game:
         pass
 
     def start_game(self) -> None:
-        """Starts the chess game."""
-        pass
+        """
+        Starts the chess game.
+
+        TODO : check for net connection
+        TODO: Check if console supported
+        """
+        if self.show_welcome_screen() == "q":
+            print(self.term.home + self.term.clear + self.term.exit_fullscreen)
+        else:
+            # call show_game_menu
+            self.show_game_menu()
