@@ -4,8 +4,8 @@ from blessed import Terminal
 
 PIECES = "".join(chr(9812 + x) for x in range(12))
 print(PIECES)
-ROW = ("A", "B", "C", "D", "E", "F", "G", "H")
-COL = tuple(map(str, range(1, 9)))
+COL = ("A", "B", "C", "D", "E", "F", "G", "H")
+ROW = tuple(map(str, range(1, 9)))
 
 # rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR
 initial_game = [
@@ -104,59 +104,59 @@ class Game:
         with self.term.location(x, y + (self.tile_height // 2)):
             print(style(str.center(text, self.tile_width)))
 
+    def get_piece_and_color(self, row: int, col: int) -> tuple:
+        """Returns color and piece info of tyhe cell."""
+        if (row + col) % 2 == 0:
+            bg = "blue"
+        else:
+            bg = "green"
+        piece, color = mapper[self.chess_board[row][col]]
+        return (piece, color, bg)
+
     def show_game_screen(self) -> None:
         """Shows the chess board."""
         print(self.term.fullscreen())
         print(self.term.home + self.term.clear)
-        for j in range(len(self)):
+        for i in range(len(self)):
             # for every col we need to add number too!
-            num = len(self) - j
+            num = len(self) - i
             x = self.tile_width // 2
-            y = j * self.tile_height + self.tile_height // 2
+            y = i * self.tile_height + self.tile_height // 2
             with self.term.location(x, y):
                 print(num)
-            for i in range(len(self)):
-                if (i + j) % 2 == 0:
-                    bg = "blue"
-                else:
-                    bg = "green"
-                piece, color = mapper[self.chess_board[j][i]]
-                self.draw_tile(
-                    x * 2 + i * (self.tile_width + self.offset_x),
-                    j * (self.tile_height + self.offset_y),
-                    text=piece,
-                    fg=color,
-                    bg=bg,
-                )
+            for j in range(len(self)):
+                self.update_block(i, j)
+        # adding Alphabets for columns
         for i in range(len(self)):
             with self.term.location(
                 x * 2 - 1 + i * self.tile_width, len(self) * self.tile_height
             ):
-                print(str.center(ROW[i], len(self)))
-        print(self.term.move_y(self.term.height - 4))
+                print(str.center(COL[i], len(self)))
+
+    def update_block(self, row: int, col: int) -> None:
+        """Updates block on row and col(we must first mutate actual list first)."""
+        piece, color, bg = self.get_piece_and_color(row, col)
+        # print(row, col, piece)
+        self.draw_tile(
+            self.tile_width + col * (self.tile_width + self.offset_x),
+            row * (self.tile_height + self.offset_y),
+            text=piece,
+            fg=color,
+            bg=bg,
+        )
 
     def start_game(self) -> int:
         """Starts the chess game."""
+        self.show_game_screen()
         while True:
-            self.show_game_screen()
-            if self.white_move:
-                print(
-                    self.term.black_on_blue(
-                        self.term.center("Which piece you want to play white?")
-                    )
-                )
-            else:
-                print(
-                    self.term.black_on_blue(
-                        self.term.center("Which piece you want to play black?")
-                    )
-                )
-            # with self.term.cbreak():
+            # going to the top and clearing previous inputs
+            print(self.term.move_y(self.term.height - 6) + self.term.clear_eos)
+            message_string = f'Which piece, {"White" if self.white_move else "Black"}?'
+            print(self.term.black_on_blue(self.term.center(message_string)))
             inp = input()
-            # print(inp)
             # TODO:: VALIDATION
-            row = ROW.index(inp[0].upper())
-            col = len(self) - int(inp[1])
+            col = COL.index(inp[0].upper())
+            row = len(self) - int(inp[1])
             # TODO:: VALIDATION
             if self.chess_board[row][col] != "em":
                 inp2 = input()
@@ -164,13 +164,14 @@ class Game:
                     print("LOL try again!")
                     continue
                 # TODO:: VALIDATION
-                row2 = ROW.index(inp2[0].upper())
-                col2 = len(self) - int(inp2[1])
-                print(row, col, row2, col2)
+                col2 = COL.index(inp2[0].upper())
+                row2 = len(self) - int(inp2[1])
                 piece = self.chess_board[row][col]
                 self.chess_board[row][col] = "em"
                 self.chess_board[row2][col2] = piece
-                # TODO:: UPDATE VIEW
+                self.update_block(row2, col2)
+                self.update_block(row, col)
+                self.white_move = not self.white_move
             else:
                 print("Invalid move")
         return 1
