@@ -1,11 +1,9 @@
 import sys
 from copy import deepcopy
 
-import menu_helper
+import ascii_art
 from blessed import Terminal
 
-
-helper = menu_helper.Helper()
 term = Terminal()
 
 PIECES = "".join(chr(9812 + x) for x in range(12))
@@ -183,9 +181,9 @@ class Game:
         curr_highlight = 9
         term_positions = [int(w * 0.38), int(w * 0.46), int(w * 0.54), int(w * 0.62)]
 
-        title_split = helper.title.split("\n")
+        title_split = ascii_art.TITLE.split("\n")
         with term.fullscreen(), term.cbreak():
-            print(term.home + term.clear + term.move_y(int(h * 0.30)))
+            print(term.home + term.clear + term.move_y(int(h * 0.20)))
             for component in title_split:
                 print(term.center(component))
             print(term.home + term.move_y(int(h * 0.60)))
