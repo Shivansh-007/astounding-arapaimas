@@ -191,7 +191,7 @@ class Game:
 
         title_split = ascii_art.menu_logo.strip().split("\n")
         max_chars = len(max(title_split, key=len))
-        with self.term.fullscreen(), self.term.cbreak(), self.term.hidden_cursor():
+        with self.term.cbreak(), self.term.hidden_cursor():
             print(self.term.home + self.term.clear + self.term.move_y(int(h * 0.10)))
             for component in title_split:  # Prints centered title
                 component = str(component) + " " * (max_chars - len(component))
