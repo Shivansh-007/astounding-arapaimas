@@ -3,8 +3,6 @@ import sys
 import ascii_art
 from blessed import Terminal
 
-term = Terminal()
-
 
 class Player:
     """Class for defining a player."""
@@ -31,6 +29,7 @@ class Game:
         self.server_ip = None
         self.chess_board = None
         self.term = Terminal()
+        self.curr_highlight = None
 
     def create_lobby(self) -> int:
         """Used to create a game lobby on the server or locally."""
@@ -115,84 +114,83 @@ class Game:
 
         def print_options() -> None:
             for i, option in enumerate(options):
-                if i == curr_highlight and i != 3:
+                if i == self.curr_highlight and i != 3:
                     print(
-                        term.move_x(term_positions[i])
-                        + term.underline_bold_white_on_green
+                        self.term.move_x(term_positions[i])
+                        + self.term.underline_bold_white_on_green
                         + str(option)
-                        + term.normal
-                        + term.move_x(0),
+                        + self.term.normal
+                        + self.term.move_x(0),
                         end="",
                     )
-                elif i == curr_highlight and i == 3:
+                elif i == self.curr_highlight and i == 3:
                     print(
-                        term.move_x(term_positions[i])
-                        + term.underline_bold_white_on_red
+                        self.term.move_x(term_positions[i])
+                        + self.term.underline_bold_white_on_red
                         + str(option)
-                        + term.normal
-                        + term.move_x(0),
+                        + self.term.normal
+                        + self.term.move_x(0),
                         end="",
                     )
                 elif i == 3:
                     print(
-                        term.move_x(term_positions[i])
-                        + term.bold_red
+                        self.term.move_x(term_positions[i])
+                        + self.term.bold_red
                         + str(option)
-                        + term.normal
-                        + term.move_x(0),
+                        + self.term.normal
+                        + self.term.move_x(0),
                         end="",
                     )
                 else:
                     print(
-                        term.move_x(term_positions[i])
-                        + term.bold_green
+                        self.term.move_x(term_positions[i])
+                        + self.term.bold_green
                         + str(option)
-                        + term.move_x(0),
+                        + self.term.move_x(0),
                         end="",
                     )
                 sys.stdout.flush()
-            if curr_highlight != 9:
+            if self.curr_highlight != 9:
                 print(
-                    term.move_down(3)
-                    + term.green
-                    + term.center(brief[curr_highlight])
-                    + term.move_x(0)
+                    self.term.move_down(3)
+                    + self.term.green
+                    + self.term.center(brief[self.curr_highlight])
+                    + self.term.move_x(0)
                     + "\n\n"
-                    + term.white
-                    + term.center("Press [ENTER] to confirm")
-                    + term.move_up(5),
+                    + self.term.white
+                    + self.term.center("Press [ENTER] to confirm")
+                    + self.term.move_up(5),
                     end="",
                 )
             else:
                 print(
-                    term.move_down(3)
-                    + term.white
-                    + term.center("Press [TAB] for option selection")
-                    + term.normal
-                    + term.move_up(4)
-                    + term.move_x(0)
+                    self.term.move_down(3)
+                    + self.term.white
+                    + self.term.center("Press [TAB] for option selection")
+                    + self.term.normal
+                    + self.term.move_up(4)
+                    + self.term.move_x(0)
                 )
 
         def select_option() -> None:
-            global curr_highlight
-            if curr_highlight < 3:
-                curr_highlight += 1
+            if self.curr_highlight < 3:
+                self.curr_highlight += 1
             else:
-                curr_highlight = 0
+                self.curr_highlight = 0
 
         def next() -> None:
-            if not curr_highlight:
+            if not self.curr_highlight:
                 print(
                     "Created a new game"
                 )  # Executes something when 'Create Game' is called
-            elif curr_highlight == 1:
+            elif self.curr_highlight == 1:
                 pass  # Link to the actual game when selected
-            elif curr_highlight == 2:
+            elif self.curr_highlight == 2:
                 print("Settings Selected")  # Link to settings file to access settings
             else:
                 print("Exited the game")
 
-        w, h = term.width, term.height
+        w, h = self.term.width, self.term.height
         options = [" Create Game ", " Join Game ", " Settings ", " Exit "]
         brief = [
             "Creates an new game and waits for an opponent to join",
@@ -200,42 +198,24 @@ class Game:
             "Change your game settings",
             "Exit the game",
         ]
-        global curr_highlight
-        curr_highlight = 9
+        self.curr_highlight = 9
         term_positions = [int(w * 0.38), int(w * 0.46), int(w * 0.54), int(w * 0.62)]
 
         title_split = ascii_art.TITLE.split("\n")
-        with term.fullscreen(), term.cbreak():
-            print(term.home + term.clear + term.move_y(int(h * 0.20)))
+        with self.term.fullscreen(), self.term.cbreak():
+            print(self.term.home + self.term.clear + self.term.move_y(int(h * 0.20)))
             for component in title_split:
-                print(term.center(component))
-            print(term.home + term.move_y(int(h * 0.60)))
+                print(self.term.center(component))
+            print(self.term.home + self.term.move_y(int(h * 0.60)))
             print_options()
             pressed = ""
             while pressed != "KEY_ENTER":
-                pressed = term.inkey().name
+                pressed = self.term.inkey().name
                 if pressed == "KEY_TAB":
                     select_option()
                     print_options()
-        print(term.home + term.clear)
+        print(self.term.home + self.term.clear)
         next()
-
-    def draw_tile(
-        self,
-        x: int = 0,
-        y: int = 0,
-        text: str = None,
-        fg: str = "black",
-        bg: str = "white",
-    ) -> None:
-        """Draws one tile and text inside of it."""
-        style = getattr(self.term, f"{fg}_on_{bg}")
-        for j in range(y, y + self.tile_height):
-            for i in range(x, x + self.tile_width):
-                with self.term.location(i, j):
-                    print(style(" "))
-        with self.term.location(x, y + (self.tile_height // 2)):
-            print(style(str.center(text, self.tile_width)))
 
     def show_game_screen(self) -> None:
         """Shows the chess board."""
@@ -244,7 +224,3 @@ class Game:
     def start_game(self) -> None:
         """Starts the chess game."""
         pass
-
-
-game = Game()
-game.show_game_menu()
