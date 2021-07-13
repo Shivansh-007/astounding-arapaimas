@@ -4,8 +4,8 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy.orm import Session
 
+from api import schemas
 from api.crud import game
-from api.schemas import game
 from api.endpoints import get_db
 from api.utils import auth
 
@@ -20,7 +20,7 @@ async def new_game(request: Request, db: Session = Depends(get_db)) -> Response:
     user_id = await auth.JWTBearer().get_user_by_token(request)
     game_id = f"{str(user_id)}{str(datetime.now().timestamp)}"
 
-    new_game_obj = game.GameCreate(
+    new_game_obj = schemas.game.GameCreate(
         game_id=game_id,
         is_ongoing=True,
         winner_id=None,
