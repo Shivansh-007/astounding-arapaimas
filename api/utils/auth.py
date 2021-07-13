@@ -47,6 +47,15 @@ class JWTBearer(HTTPBearer):
         request.state.user_id = int(user_id)
         return credentials
 
+    async def get_user_by_token(self, request: Request) -> int:
+        """Get user ID by authorization token."""
+        credentials: HTTPAuthorizationCredentials = await super().__call__(request)
+        credentials = credentials.credentials
+
+        token_data = jwt.decode(credentials, Server.JWT_SECRET)
+        user_id, _ = token_data["id"], token_data["salt"]
+        return int(user_id)
+
 
 async def reset_user_token(
     user_id: str, username: str, db: t.Optional[Session] = next(get_db())

@@ -4,20 +4,24 @@ from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi_socketio import SocketManager
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from api.constants import Server
-from api.endpoints import auth
+from api.endpoints import auth, games
 
 log = logging.getLogger(__name__)
 
 app = FastAPI(docs_url=None, redoc_url=None)
+socket_manager = SocketManager(app=app)
 
 app.include_router(router=auth.router)
+app.include_router(router=games.router, prefix="/game")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_methods=["GET", "HEAD"],
+    allow_methods=["GET"],
     allow_headers=["*"],
 )
 app.mount("/static", StaticFiles(directory="api/static"), name="static")
