@@ -111,6 +111,6 @@ class Game:
         """Shows the chess board."""
         pass
 
-    def start_game(self) -> int:
+    def start_game(self) -> None:
         """Starts the chess game."""
         pass
