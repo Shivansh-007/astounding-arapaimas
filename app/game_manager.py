@@ -109,7 +109,7 @@ class Game:
             keypress = self.term.inkey()
             return keypress
 
-    def show_game_menu(self) -> None:
+    def show_game_menu(self) -> str:
         """Prints the game-menu screen."""
 
         def print_options() -> None:
@@ -178,18 +178,6 @@ class Game:
             else:
                 self.curr_highlight = 0
 
-        def next() -> None:  # Executes the selected option
-            if not self.curr_highlight:
-                print(
-                    "Created a new game"
-                )  # Executes something when 'Create Game' is called
-            elif self.curr_highlight == 1:
-                pass  # Link to the actual game when selected
-            elif self.curr_highlight == 2:
-                print("Settings Selected")  # Link to settings file to access settings
-            else:
-                print("Exited the game")
-
         w, h = self.term.width, self.term.height
         options = [" Create Game ", " Join Game ", " Settings ", " Exit "]
         brief = [
@@ -217,7 +205,15 @@ class Game:
                     select_option()
                     print_options()
         print(self.term.home + self.term.clear)  # Resets the terminal
-        next()
+
+        if not self.curr_highlight:
+            return "NEW_LOBBY"
+        elif self.curr_highlight == 1:
+            return "CONNECT_TO_LOBBY"
+        elif self.curr_highlight == 2:
+            return "SETTINGS"
+        else:
+            return "EXIT"
 
     def show_game_screen(self) -> None:
         """Shows the chess board."""
@@ -231,7 +227,19 @@ class Game:
         TODO: Check if console supported
         """
         if self.show_welcome_screen() == "q":
-            print(self.term.home + self.term.clear + self.term.exit_fullscreen)
+            print(self.term.clear + self.term.exit_fullscreen)
         else:
             # call show_game_menu
-            self.show_game_menu()
+            menu_choice = self.show_game_menu()
+            if menu_choice == "NEW_LOBBY":
+                # make a new lobby
+                pass
+            elif menu_choice == "CONNECT_TO_LOBBY":
+                # connect to a lobby
+                pass
+            elif menu_choice == "SETTINGS":
+                # open settings menu
+                pass
+            elif menu_choice == "EXIT":
+                # exit the game peacefully
+                print(self.term.clear + self.term.exit_fullscreen + self.term.clear)
