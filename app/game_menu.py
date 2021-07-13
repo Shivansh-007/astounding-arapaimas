@@ -1,4 +1,5 @@
 from blessed import Terminal
+from subprocess import call
 import menu_helper      
 #import game_manager
 import sys
@@ -39,11 +40,11 @@ def select_option(key):
 
 def next():
     if not curr_highlight:
-        print('Created a new game'), #Executes something when 'Create Game' is called
+        print('Created a new game') #Executes something when 'Create Game' is called
     elif curr_highlight == 1:
-        exec(open('game_manager.py').read()), #Link to the actual game when selected
+        call(["python", "game_manager.py"]) #Link to the actual game when selected
     elif curr_highlight == 2:
-        print('Settings Selected'), #Link to settings file to access settings
+        print('Settings Selected') #Link to settings file to access settings
     else:
         print('Exited the game')
 
