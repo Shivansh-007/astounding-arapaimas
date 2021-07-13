@@ -1,4 +1,4 @@
-import ascii_art
+from app import ascii_art
 from blessed import Terminal
 
 
