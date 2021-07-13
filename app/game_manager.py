@@ -1,6 +1,6 @@
 import sys
 
-import ascii_art
+from app import ascii_art
 from blessed import Terminal
 
 
@@ -228,7 +228,3 @@ class Game:
     def start_game(self) -> None:
         """Starts the chess game."""
         pass
-
-
-game = Game()
-game.show_game_menu()
