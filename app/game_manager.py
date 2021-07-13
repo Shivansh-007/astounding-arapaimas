@@ -1,3 +1,5 @@
+import sys
+
 from app import ascii_art
 from blessed import Terminal
 
@@ -27,6 +29,7 @@ class Game:
         self.server_ip = None
         self.chess_board = None
         self.term = Terminal()
+        self.curr_highlight = None
 
     def create_lobby(self) -> int:
         """Used to create a game lobby on the server or locally."""
@@ -107,8 +110,114 @@ class Game:
             return keypress
 
     def show_game_menu(self) -> None:
-        """Prints the screen to choose to play online or offline."""
-        pass
+        """Prints the game-menu screen."""
+
+        def print_options() -> None:
+            for i, option in enumerate(options):  # updates the options
+                if i == self.curr_highlight and i != 3:
+                    print(
+                        self.term.move_x(term_positions[i])
+                        + self.term.bold_white_on_green
+                        + str(option)
+                        + self.term.normal
+                        + self.term.move_x(0),
+                        end="",
+                    )
+                elif i == self.curr_highlight and i == 3:
+                    print(
+                        self.term.move_x(term_positions[i])
+                        + self.term.bold_white_on_red
+                        + str(option)
+                        + self.term.normal
+                        + self.term.move_x(0),
+                        end="",
+                    )
+                elif i == 3:
+                    print(
+                        self.term.move_x(term_positions[i])
+                        + self.term.bold_red
+                        + str(option)
+                        + self.term.normal
+                        + self.term.move_x(0),
+                        end="",
+                    )
+                else:
+                    print(
+                        self.term.move_x(term_positions[i])
+                        + self.term.bold_green
+                        + str(option)
+                        + self.term.move_x(0),
+                        end="",
+                    )
+                sys.stdout.flush()
+            if self.curr_highlight != 9:
+                print(
+                    self.term.move_down(3)
+                    + self.term.green
+                    + self.term.center(brief[self.curr_highlight])
+                    + self.term.move_x(0)
+                    + "\n\n"
+                    + self.term.white
+                    + self.term.center("Press [ENTER] to confirm")
+                    + self.term.move_up(5),
+                    end="",
+                )
+            else:
+                print(
+                    self.term.move_down(3)
+                    + self.term.white
+                    + self.term.center("Press [TAB] for option selection")
+                    + self.term.normal
+                    + self.term.move_up(4)
+                    + self.term.move_x(0)
+                )
+
+        def select_option() -> None:  # updates the highlighter variable
+            if self.curr_highlight < 3:
+                self.curr_highlight += 1
+            else:
+                self.curr_highlight = 0
+
+        def next() -> None:  # Executes the selected option
+            if not self.curr_highlight:
+                print(
+                    "Created a new game"
+                )  # Executes something when 'Create Game' is called
+            elif self.curr_highlight == 1:
+                pass  # Link to the actual game when selected
+            elif self.curr_highlight == 2:
+                print("Settings Selected")  # Link to settings file to access settings
+            else:
+                print("Exited the game")
+
+        w, h = self.term.width, self.term.height
+        options = [" Create Game ", " Join Game ", " Settings ", " Exit "]
+        brief = [
+            "Creates an new game and waits for an opponent to join",
+            "Join a pre-existing game of your choice",
+            "Change game settings",
+            "Exit the game",
+        ]
+        self.curr_highlight = 9
+        term_positions = [int(w * 0.38), int(w * 0.46), int(w * 0.54), int(w * 0.62)]
+
+        title_split = ascii_art.menu_logo.strip().split("\n")
+        max_chars = len(max(title_split, key=len))
+        with self.term.fullscreen(), self.term.cbreak(), self.term.hidden_cursor():
+            print(self.term.home + self.term.clear + self.term.move_y(int(h * 0.10)))
+            for component in title_split:  # Prints centered title
+                component = str(component) + " " * (max_chars - len(component))
+                print(self.term.center(component))
+            print(self.term.move_down(3))  # Sets the cursor to the options position
+            print_options()
+            pressed = ""
+            while pressed != "KEY_ENTER":  # Loops till the user chooses an option
+                pressed = self.term.inkey().name
+                if pressed == "KEY_TAB":
+                    select_option()
+                    print_options()
+        print(self.term.home + self.term.clear)  # Resets the terminal
+        next()
 
     def show_game_screen(self) -> None:
         """Shows the chess board."""
