@@ -75,7 +75,7 @@ class Game:
     def show_game_screen(self) -> None:
         """Shows the chess board."""
         print(self.term.fullscreen())
-        print(self.term.home + self.term.clear + self.term.move_y(70))
+        print(self.term.home + self.term.clear)
         for j in range(len(self)):
             # for every col we need to add number too!
             num = len(self) - j
