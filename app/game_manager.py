@@ -1,6 +1,5 @@
 from copy import deepcopy
 from blessed import Terminal
-from subprocess import call
 
 import menu_helper    
 import sys
@@ -8,12 +7,6 @@ import sys
 
 helper = menu_helper.Helper()
 term = Terminal()
-
-w,h = term.width, term.height
-options = [' Create Game ', ' Join Game ', ' Settings ', ' Exit ']
-brief = ['Creates an new game and waits for an opponent to join','Join a pre-existing game of your choice','Change your game settings','Exit the game']
-curr_highlight = 0
-term_positions = [int(w*0.38),int(w*0.46),int(w*0.54),int(w*0.62)]
 
 PIECES = "".join(chr(9812 + x) for x in range(12))
 print(PIECES)
@@ -98,6 +91,7 @@ class Game:
 
     def show_game_menu(self) -> None:
         """Prints the game-menu screen."""
+
         def print_options():
             for i,option in enumerate(options):
                 if i == curr_highlight and i != 3: 
@@ -125,13 +119,19 @@ class Game:
             if not curr_highlight:
                 print('Created a new game') #Executes something when 'Create Game' is called
             elif curr_highlight == 1:
-                call(["python", "game_manager.py"]) #Link to the actual game when selected
+                pass  #Link to the actual game when selected
             elif curr_highlight == 2:
                 print('Settings Selected') #Link to settings file to access settings
             else:
                 print('Exited the game')
 
+        w,h = term.width, term.height
+        options = [' Create Game ', ' Join Game ', ' Settings ', ' Exit ']
+        brief = ['Creates an new game and waits for an opponent to join','Join a pre-existing game of your choice','Change your game settings','Exit the game']
+        global curr_highlight 
         curr_highlight = 9
+        term_positions = [int(w*0.38),int(w*0.46),int(w*0.54),int(w*0.62)]
+
         title_split = helper.title.split("\n")
         with term.fullscreen(), term.cbreak():
             print(term.home + term.clear + term.move_y(int(h*.30))) 

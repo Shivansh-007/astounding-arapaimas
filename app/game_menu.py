@@ -1,7 +1,6 @@
 from blessed import Terminal
 from subprocess import call
-import menu_helper      
-#import game_manager
+import menu_helper    
 import sys
 
 
@@ -9,7 +8,7 @@ helper = menu_helper.Helper()
 term = Terminal()
 
 w,h = term.width, term.height
-options = ['Create Game', 'Join Game', 'Settings', 'Exit']
+options = [' Create Game ', ' Join Game ', ' Settings ', ' Exit ']
 brief = ['Creates an new game and waits for an opponent to join','Join a pre-existing game of your choice','Change your game settings','Exit the game']
 curr_highlight = 0
 term_positions = [int(w*0.38),int(w*0.46),int(w*0.54),int(w*0.62)]
@@ -53,10 +52,10 @@ def main():
     curr_highlight = 9
     title_split = helper.title.split("\n")
     with term.fullscreen(), term.cbreak():
-        print(term.home + term.clear + term.move_y(int(term.height*.30))) 
+        print(term.home + term.clear + term.move_y(int(h*.30))) 
         for component in title_split:     
             print(term.center(component))
-        print(term.home + term.move_y(int(term.height*.60)))
+        print(term.home + term.move_y(int(h*.60)))
         print_options()
         pressed = ''
         while pressed != 'KEY_ENTER':
