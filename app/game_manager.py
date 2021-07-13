@@ -1,5 +1,3 @@
-import sys
-
 from app import ascii_art
 from blessed import Terminal
 
@@ -149,7 +147,6 @@ class Game:
                         + self.term.move_x(0),
                         end="",
                     )
-                sys.stdout.flush()
             if self.curr_highlight != 9:
                 print(
                     self.term.move_down(3)
