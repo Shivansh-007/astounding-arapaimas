@@ -1,6 +1,7 @@
 from blessed import Terminal
 
 from app import ascii_art, constants
+from app.configuration.config_loader import ConfigLoader
 
 
 class Player:
@@ -179,6 +180,12 @@ class Game:
         if self.show_welcome_screen() == "q":
             print(self.term.clear + self.term.exit_fullscreen)
         else:
+            # Show config loader
+            config = ConfigLoader()
+            response = config.config_loader_screen(self.term)
+            if response is False:
+                return
+
             # call show_game_menu
             menu_choice = self.show_game_menu()
             if menu_choice == "NEW_LOBBY":

@@ -1,3 +1,5 @@
+import os
+
 from app import ascii_art
 
 GAME_WELCOME_BOTTOM = (
@@ -34,3 +36,24 @@ MENU_MAPPING = {
     " Settings ": ("Change game settings", "bold_white_on_green"),
     " Exit ": ("Exit the game", "bold_white_on_red"),
 }
+
+
+class Configuration:
+    """Configuration constants for the app."""
+
+    configuration_paths = {
+        "Windows": (
+            os.path.expandvars("%APPDATA%/stealth-chess/config.yaml"),
+            os.path.expandvars("%APPDATA%/stealth-chess/config.yml"),
+        ),
+        "Darwin": (
+            os.path.expandvars("$HOME/.config/stealth-chess/config.yaml"),
+            os.path.expandvars("$HOME/.config/stealth-chess/config.yml"),
+        ),
+        "Linux": (
+            os.path.expandvars("$HOME/.config/stealth-chess/config.yaml"),
+            os.path.expandvars("$HOME/.config/stealth-chess/config.yml"),
+        ),
+    }
+
+    tokens = ["token"]
