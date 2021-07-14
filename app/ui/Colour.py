@@ -25,31 +25,60 @@ class ColourScheme:
             "board_edges": "normal",
             "white_squares": "black_on_white",
             "black_squares": "normal",
+            "game_message": "black_on_blue",
+            "ws_bottom": "green_on_black",
+            "ws_top": "red_on_black",
+            "ws_side_chars": "grey30_on_black",
+            "ws_message": "blink_white_on_black",
+            "ws_think": "grey10_bold_on_black",
+            "gm_options": "bold_white_on_green",
+            "gm_exit": "bold_white_on_red",
+            "gm_message": "white",
         },
         "mean_green": {
             "text": "green_on_black",
             "board_edges": "green_on_black",
             "white_squares": "black_on_green3",
             "black_squares": "green3_on_black",
+            "game_message": "black_on_blue",
+            "ws_bottom": "green3_on_black",
+            "ws_top": "red_on_black",
+            "ws_side_chars": "grey30_on_black",
+            "ws_message": "blink_white_on_black",
+            "ws_think": "grey10_bold_on_black",
+            "gm_options": "bold_white_on_green",
+            "gm_exit": "bold_white_on_red",
+            "gm_message": "white",
         },
         "light_green": {
             "text": "greenyellow_on_brightwhite",
             "board_edges": "chartreuse_on_brightwhite",
             "white_squares": "brightwhite_on_green",
             "black_squares": "green_on_aqua",
+            "game_message": "black_on_blue",
+            "ws_bottom": "green_on_black",
+            "ws_top": "red_on_black",
+            "ws_side_chars": "grey30_on_black",
+            "ws_message": "blink_white_on_black",
+            "ws_think": "grey10_bold_on_black",
+            "gm_options": "bold_white_on_green",
+            "gm_exit": "bold_white_on_red",
+            "gm_message": "white",
         },
     }
 
     def __init__(self, terminal: Terminal, theme: str = "default"):
         if theme in self.themes:
             theme = self.themes[theme]
-            self.text = getattr(terminal, theme["text"])
-            self.board_edges = getattr(terminal, theme["board_edges"])
-            self.white_squares = getattr(terminal, theme["white_squares"])
-            self.black_squares = getattr(terminal, theme["black_squares"])
+            for element, style in theme.items():
+                setattr(self, element, getattr(terminal, style))
             self.normal = terminal.normal
         else:
             raise ThemeError(f"'{theme}' is not a valid theme...")
+
+    def return_themes(self) -> list:
+        """Return the names of available themes."""
+        return list(self.themes.keys())
 
 
 if __name__ == "__main__":
