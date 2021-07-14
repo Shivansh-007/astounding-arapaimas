@@ -15,10 +15,7 @@ from api.utils import auth
 log = logging.getLogger(__name__)
 router = APIRouter(tags=["Game Endpoints"])
 
-INITIAL_GAME = (
-    "rnbqkbnr/pppppppp/emememememememem/emememememememem/"
-    "emememememememem/emememememememem/PPPPPPPP/RNBQKBNR"
-)
+INITIAL_GAME = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
 
 class ChessNotifier:
@@ -81,7 +78,7 @@ class ChessNotifier:
 
         if self.connections[room_name] == {} or len(self.connections[room_name]) == 0:
             self.connections[room_name] = {}
-        self.connections[room_name].extend({user_id: websocket})
+        self.connections[room_name].update({user_id: websocket})
 
         if room_existed:
             await notifier._notify(f"User#{user_id} has joined the game.", game_id)
@@ -96,7 +93,7 @@ class ChessNotifier:
         db: t.Optional[Session] = next(get_db()),
     ) -> None:
         """Remove a websocket connection and close the chess game and mark the winner."""
-        self.connections[room_name].remove(user_id)
+        self.connections[room_name].pop(user_id)
 
         remaing_user = self.connections[room_name].keys()[0]
         game.mark_game_winner(db, game_id=room_name, winner_id=remaing_user)
