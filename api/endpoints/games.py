@@ -95,7 +95,7 @@ class ChessNotifier:
         """Remove a websocket connection and close the chess game and mark the winner."""
         self.connections[room_name].pop(user_id)
 
-        remaing_user = self.connections[room_name].keys()[0]
+        remaing_user = next(iter(self.connections[room_name].keys()))
         game.mark_game_winner(db, game_id=room_name, winner_id=remaing_user)
 
         log.info(
