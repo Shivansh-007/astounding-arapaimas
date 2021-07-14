@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 router = APIRouter(tags=["Game Endpoints"], dependencies=[Depends(auth.JWTBearer())])
 
 INITIAL_GAME = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-BOARD_PREFIX = "BOARD"
+BOARD_PREFIX = "BOARD"  # add this to yaml config
 
 
 @router.get("/new")
@@ -140,7 +140,9 @@ async def game_talking_endpoint(websocket: WebSocket, game_id: str) -> None:
         raise HTTPException(400, response)
 
     try:
-        chess_board = ChessBoard(INITIAL_GAME)
+        chess_board = ChessBoard(
+            INITIAL_GAME
+        )  # init a new game as soon as one player connects
         await notifier._notify(f"board::{chess_board.give_board()}", game_id)
 
         while True:
@@ -151,6 +153,7 @@ async def game_talking_endpoint(websocket: WebSocket, game_id: str) -> None:
                 if notifier.get_members(game_id) is not None
                 else {}
             )
+            # syntax PREFIX::COMMAND::<VALUE>
             prefix, command, value = "", "", ""
             try:
                 data = data.split("::")
@@ -163,24 +166,23 @@ async def game_talking_endpoint(websocket: WebSocket, game_id: str) -> None:
 
             if prefix == BOARD_PREFIX:
                 # all chess_board related stuff here
-                # syntax BOARD::<COMMAND>::VALUE
                 try:
                     if command == "MOVE":
                         if value:
                             chess_board.move_piece(value)
                         await notifier._notify(
                             f"{BOARD_PREFIX}::{chess_board.give_board()}", game_id
-                        )
+                        )  # send new FEN representation if move is valid
                     elif command == "GET_ALL_MOVES":
                         await notifier._notify(
                             f"{BOARD_PREFIX}::{chess_board.all_available_moves()}",
                             game_id,
-                        )
+                        )  # send all moves available for the current active player
                     elif command == "RESET":
                         chess_board.reset()
                         await notifier._notify(
                             f"{BOARD_PREFIX}::{chess_board.give_board()}", game_id
-                        )
+                        )  # reset board and send new FEN
                     else:
                         log.debug(f"invalid command {command,value}")
                 except Chessnut.game.InvalidMove:
