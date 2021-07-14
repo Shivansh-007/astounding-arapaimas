@@ -38,7 +38,7 @@ async def new_game_create(request: Request) -> dict:
     )
     game.create(db, obj_in=new_game_obj)
 
-    return {"room": f"game/{game_id}"}
+    return {"room": f"/game/{game_id}"}
 
 
 class ChessNotifier:
@@ -143,7 +143,7 @@ async def game_talking_endpoint(websocket: WebSocket, game_id: str) -> None:
         chess_board = ChessBoard(
             INITIAL_GAME
         )  # init a new game as soon as one player connects
-        await notifier._notify(f"board::{chess_board.give_board()}", game_id)
+        await notifier._notify(f"{BOARD_PREFIX}::{chess_board.give_board()}", game_id)
 
         while True:
             data = await websocket.receive_text()
