@@ -3,6 +3,7 @@ from collections import defaultdict
 from datetime import datetime
 from typing import Optional
 
+import Chessnut.game
 from fastapi import APIRouter, Depends, HTTPException, Request, WebSocket
 from sqlalchemy.orm import Session
 from starlette.websockets import WebSocketDisconnect
@@ -11,11 +12,13 @@ from api import schemas
 from api.crud import game
 from api.endpoints import get_db
 from api.utils import auth
+from app.chess import ChessBoard
 
 log = logging.getLogger(__name__)
 router = APIRouter(tags=["Game Endpoints"], dependencies=[Depends(auth.JWTBearer())])
 
 INITIAL_GAME = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+BOARD_PREFIX = "BOARD"
 
 
 @router.get("/new")
@@ -35,7 +38,7 @@ async def new_game_create(request: Request) -> dict:
     )
     game.create(db, obj_in=new_game_obj)
 
-    return {"room": f"/game/{game_id}"}
+    return {"room": f"game/{game_id}"}
 
 
 class ChessNotifier:
@@ -137,6 +140,9 @@ async def game_talking_endpoint(websocket: WebSocket, game_id: str) -> None:
         raise HTTPException(400, response)
 
     try:
+        chess_board = ChessBoard(INITIAL_GAME)
+        await notifier._notify(f"board::{chess_board.give_board()}", game_id)
+
         while True:
             data = await websocket.receive_text()
 
@@ -145,10 +151,45 @@ async def game_talking_endpoint(websocket: WebSocket, game_id: str) -> None:
                 if notifier.get_members(game_id) is not None
                 else {}
             )
+            prefix, command, value = "", "", ""
+            try:
+                data = data.split("::")
+                prefix = data[0]
+                command = data[1]
+            except IndexError:
+                log.debug(f"Invalid command {data}")
+            if len(data) == 3:
+                value = data[2]
+
+            if prefix == BOARD_PREFIX:
+                # all chess_board related stuff here
+                # syntax BOARD::<COMMAND>::VALUE
+                try:
+                    if command == "MOVE":
+                        if value:
+                            chess_board.move_piece(value)
+                        await notifier._notify(
+                            f"{BOARD_PREFIX}::{chess_board.give_board()}", game_id
+                        )
+                    elif command == "GET_ALL_MOVES":
+                        await notifier._notify(
+                            f"{BOARD_PREFIX}::{chess_board.all_available_moves()}",
+                            game_id,
+                        )
+                    elif command == "RESET":
+                        chess_board.reset()
+                        await notifier._notify(
+                            f"{BOARD_PREFIX}::{chess_board.give_board()}", game_id
+                        )
+                    else:
+                        log.debug(f"invalid command {command,value}")
+                except Chessnut.game.InvalidMove:
+                    log.debug(f"invalid move {value} , game_id : {game_id}")
+                    pass
+
             if websocket not in room_members.values():
                 log.info("SENDER NOT IN ROOM MEMBERS: RECONNECTING")
                 await notifier.connect(websocket, game_id, user_id)
 
-            await notifier._notify(f"{data}", game_id)
     except WebSocketDisconnect:
         notifier.remove(websocket, game_id, user_id)
