@@ -186,7 +186,7 @@ class Game:
         self.curr_highlight = 9
         term_positions = [int(w * 0.38), int(w * 0.46), int(w * 0.54), int(w * 0.62)]
 
-        title_split = ascii_art.menu_logo.strip().split("\n")
+        title_split = ascii_art.menu_logo.rstrip().split("\n")
         max_chars = len(max(title_split, key=len))
         with self.term.cbreak(), self.term.hidden_cursor():
             print(self.term.home + self.term.clear + self.term.move_y(int(h * 0.10)))
