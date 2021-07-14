@@ -1,5 +1,6 @@
-from app import ascii_art
 from blessed import Terminal
+
+from app import ascii_art
 
 
 class Player:
