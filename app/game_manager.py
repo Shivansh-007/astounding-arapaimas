@@ -19,6 +19,9 @@ initial_game = [
     ["R", "N", "B", "Q", "K", "B", "N", "R"],
 ]
 
+WHITE_PIECES = ("r", "n", "b", "q", "k", "p")
+
+BLACK_PIECES = ("R", "N", "B", "Q", "K", "P")
 
 mapper = {
     "em": ("", "white"),
@@ -112,6 +115,20 @@ class Game:
             bg = "green"
         piece, color = mapper[self.chess_board[row][col]]
         return (piece, color, bg)
+    
+    def is_valid_move(self, move: str) -> bool:
+        """Checks if we are actually using our piece"""
+        if len(move) != 2:
+            return False
+        col = move[0]
+        row = move[1]
+        if col.upper() not in COL or row not in ROW:
+            return False
+        col_index = COL.index(col.upper())
+        row_index = len(self) - int(row)
+        if self.white_move:
+            return self.chess_board[row_index][col_index] in WHITE_PIECES
+        return self.chess_board[row_index][col_index] in BLACK_PIECES
 
     def show_game_screen(self) -> None:
         """Shows the chess board."""
@@ -153,27 +170,25 @@ class Game:
             print(self.term.move_y(self.term.height - 6) + self.term.clear_eos)
             message_string = f'Which piece, {"White" if self.white_move else "Black"}?'
             print(self.term.black_on_blue(self.term.center(message_string)))
-            inp = input()
-            # TODO:: VALIDATION
+            
+            while not self.is_valid_move(inp := input()):
+                print(self.term.move_y(self.term.height - 6) + self.term.clear_eos)
+                print('Please make a valid move')
             col = COL.index(inp[0].upper())
             row = len(self) - int(inp[1])
+            inp2 = input()
+            if inp == inp2:
+                print("LOL try again!")
+                continue
             # TODO:: VALIDATION
-            if self.chess_board[row][col] != "em":
-                inp2 = input()
-                if inp == inp2:
-                    print("LOL try again!")
-                    continue
-                # TODO:: VALIDATION
-                col2 = COL.index(inp2[0].upper())
-                row2 = len(self) - int(inp2[1])
-                piece = self.chess_board[row][col]
-                self.chess_board[row][col] = "em"
-                self.chess_board[row2][col2] = piece
-                self.update_block(row2, col2)
-                self.update_block(row, col)
-                self.white_move = not self.white_move
-            else:
-                print("Invalid move")
+            col2 = COL.index(inp2[0].upper())
+            row2 = len(self) - int(inp2[1])
+            piece = self.chess_board[row][col]
+            self.chess_board[row][col] = "em"
+            self.chess_board[row2][col2] = piece
+            self.update_block(row2, col2)
+            self.update_block(row, col)
+            self.white_move = not self.white_move
         return 1
 
 
