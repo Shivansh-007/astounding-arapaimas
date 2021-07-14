@@ -191,10 +191,14 @@ class Game:
                 self.fen = chessboard.give_board()
                 self.chess_board = fen_to_board(self.fen)
                 print(self.chess_board)
+            print(8 - int(end_move[1]), COL.index(end_move[0].upper()))
             self.update_block(
-                int(ROW[int(end_move[1])]), COL.index(end_move[0].upper())
+                len(self) - int(end_move[1]), COL.index(end_move[0].upper())
             )
-            # self.update_block(int(ROW[int(start_move[1])])-1, COL.index(start_move[0].upper()))
+            # print(int(ROW[int(end_move[1])]), COL.index(end_move[0].upper()))
+            self.update_block(
+                len(self) - int(start_move[1]), COL.index(start_move[0].upper())
+            )
             """
             for move in current_moves:
                 print(COL.index(move[0].upper()))
@@ -207,7 +211,6 @@ class Game:
         piece, color, bg = self.get_piece_and_color(row, col)
         if self.selected_row == row and self.selected_col == col:
             bg = "red"
-        # print(row, col, piece)
         self.draw_tile(
             self.tile_width + col * (self.tile_width + self.offset_x),
             row * (self.tile_height + self.offset_y),
