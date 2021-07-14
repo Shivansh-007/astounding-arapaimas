@@ -29,17 +29,16 @@ class ConfigLoader:
         """Loads the keys and values from a yaml file."""
         expanded_path = os.path.abspath(os.path.expandvars(self.path_loaded))
 
-        print(term.blue(f"\nLoading config: {expanded_path}"))
+        print(term.blue_on_black(f"\nLoading config: {expanded_path}"))
 
         with open(expanded_path) as loaded_config:
             loaded_config = yaml.load(loaded_config, Loader=yaml.FullLoader)
 
         for key, value in loaded_config.items():
-            if key in Configuration.tokens:
-                self.config[key] = value
-                print(term.blue(f"Loaded {key}(s): {value}"))
+            self.config[key] = value
+            print(term.blue_on_black(f"Loaded {key}: {value}"))
 
-    def load_config(self, term: Terminal) -> Optional[dict]:
+    def load_config(self, term: Terminal) -> Union[bool, dict]:
         """Loads the configuration file."""
         existing_paths = []
 
@@ -53,7 +52,7 @@ class ConfigLoader:
 
         if len(existing_paths) > 1:
             print(
-                term.blue(
+                term.blue_on_black(
                     "One or more configuration files were found to exist. "
                     f"Using the one found at {existing_paths[0]}."
                 )
@@ -66,7 +65,7 @@ class ConfigLoader:
             and self.paths not in Configuration.configuration_paths.values()
         ):
             print(
-                term.red(
+                term.red_on_black(
                     "No configuration file found at that location or "
                     "you are using a system with an unknown default configuration file location"
                 )
@@ -79,7 +78,7 @@ class ConfigLoader:
             not existing_paths
             and self.paths in Configuration.configuration_paths.values()
         ):
-            term.red(("No default configuration file found on your system"))
+            term.red_on_black(("No default configuration file found on your system"))
             return False
 
         # Choose the first path which is loaded
@@ -104,7 +103,13 @@ class ConfigLoader:
             self.exit(term)
             return False
 
-        time.sleep(10)
+        print("\n\n")
+        print(
+            term.bold_black_on_green(
+                term.center("Successfully loaded configuration...")
+            )
+        )
+        time.sleep(5)
 
     @staticmethod
     def exit(term: Terminal) -> None:

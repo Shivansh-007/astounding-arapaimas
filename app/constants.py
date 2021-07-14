@@ -55,5 +55,3 @@ class Configuration:
             os.path.expandvars("$HOME/.config/stealth-chess/config.yml"),
         ),
     }
-
-    tokens = ["token"]
