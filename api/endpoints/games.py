@@ -1,7 +1,7 @@
 import logging
-import typing as t
 from collections import defaultdict
 from datetime import datetime
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, WebSocket
 from sqlalchemy.orm import Session
@@ -53,7 +53,7 @@ class ChessNotifier:
             room_name = message["room_name"]
             await self._notify(msg, room_name)
 
-    def get_members(self, room_name: str) -> t.Optional[dict]:
+    def get_members(self, room_name: str) -> Optional[dict]:
         """Return all the members for a game_id i.e. room_name."""
         try:
             return self.connections[room_name]
@@ -70,8 +70,8 @@ class ChessNotifier:
         websocket: WebSocket,
         room_name: str,
         user_id: int,
-        db: t.Optional[Session] = next(get_db()),
-    ) -> t.Optional[str]:
+        db: Optional[Session] = next(get_db()),
+    ) -> Optional[str]:
         """Connet a websocket connection and register/update it in the DB."""
         game_obj = game.get_by_game_id(db, game_id=int(room_name))
         room_existed = False
@@ -101,7 +101,7 @@ class ChessNotifier:
         _: WebSocket,
         room_name: str,
         user_id: int,
-        db: t.Optional[Session] = next(get_db()),
+        db: Optional[Session] = next(get_db()),
     ) -> None:
         """Remove a websocket connection and close the chess game and mark the winner."""
         self.connections[room_name].pop(user_id)
