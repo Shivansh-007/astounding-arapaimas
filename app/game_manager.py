@@ -1,5 +1,6 @@
 from copy import deepcopy
 
+from app.chess import ChessBoard
 from blessed import Terminal
 
 PIECES = "".join(chr(9812 + x) for x in range(12))
@@ -7,7 +8,7 @@ print(PIECES)
 COL = ("A", "B", "C", "D", "E", "F", "G", "H")
 ROW = tuple(map(str, range(1, 9)))
 
-# rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR
+INITIAL_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 initial_game = [
     ["r", "n", "b", "q", "k", "b", "n", "r"],
     ["p"] * 8,
@@ -65,6 +66,7 @@ class Game:
         self.game_id = None  # the game lobby id that the server will provide for online multiplayer
         self.server_ip = None
         self.chess_board = deepcopy(initial_game)
+        self.fen = INITIAL_FEN
         self.tile_width = 6
         self.tile_height = 3
         self.offset_x = 0
@@ -135,8 +137,29 @@ class Game:
 
     def show_game_screen(self) -> None:
         """Shows the chess board."""
+
+        def fen_to_board(a: str) -> list:
+            b = []
+            for index, item in enumerate(a.split(" ")):
+                if index == 0:
+                    for i in item.split("/"):
+                        if len(i) == 8:
+                            b.append(["em" if _.isnumeric() else _ for _ in i])
+                        else:
+                            r = []
+                            for j in i:
+                                if j.isnumeric():
+                                    r = r + ["em"] * int(j)
+                                else:
+                                    r.append(j)
+                            b.append(r)
+                else:
+                    b.append(item)
+            return b
+
         print(self.term.fullscreen())
         print(self.term.home + self.term.clear)
+        chessboard = ChessBoard(INITIAL_FEN)
         for i in range(len(self)):
             # for every col we need to add number too!
             num = len(self) - i
@@ -152,7 +175,32 @@ class Game:
                 x * 2 - 1 + i * self.tile_width, len(self) * self.tile_height
             ):
                 print(str.center(COL[i], len(self)))
-        self.handle_arrows()
+        while True:
+            available_moves = chessboard.all_available_moves()
+            start_move, end_move = self.handle_arrows()
+            with self.term.location(0, self.term.height - 10):
+                print(f"{start_move},{end_move}")
+                print(available_moves)
+                current_moves = [
+                    move[2:]
+                    for move in available_moves
+                    if (start_move[0] + start_move[1]).lower() == move[:2]
+                ]
+                print(current_moves)
+                chessboard.move_piece("".join((*start_move, *end_move)).lower())
+                self.fen = chessboard.give_board()
+                self.chess_board = fen_to_board(self.fen)
+                print(self.chess_board)
+            self.update_block(
+                int(ROW[int(end_move[1])]), COL.index(end_move[0].upper())
+            )
+            # self.update_block(int(ROW[int(start_move[1])])-1, COL.index(start_move[0].upper()))
+            """
+            for move in current_moves:
+                print(COL.index(move[0].upper()))
+                print(ROW[int(move[1])])
+                self.update_block(int(ROW[int(move[1])]), COL.index(move[0].upper()))
+            """
 
     def update_block(self, row: int, col: int) -> None:
         """Updates block on row and col(we must first mutate actual list first)."""
@@ -170,6 +218,7 @@ class Game:
 
     def handle_arrows(self) -> None:
         """Manages the arrow movement on board."""
+        start_move = end_move = False
         while True:
             with self.term.cbreak(), self.term.hidden_cursor():
                 inp = self.term.inkey()
@@ -194,6 +243,18 @@ class Game:
                     self.selected_col += 1
                     self.update_block(self.selected_row, self.selected_col - 1)
                     self.update_block(self.selected_row, self.selected_col)
+            elif input_key == "KEY_ENTER":
+                if not start_move:
+                    start_move = (
+                        COL[self.selected_col],
+                        ROW[len(self) - self.selected_row - 1],
+                    )
+                else:
+                    end_move = (
+                        COL[self.selected_col],
+                        ROW[len(self) - self.selected_row - 1],
+                    )
+                    return start_move, end_move
 
     def start_game(self) -> int:
         """Starts the chess game."""
