@@ -23,10 +23,9 @@ class JWTBearer(HTTPBearer):
     def __init__(self, auto_error: bool = True):
         super().__init__(auto_error=auto_error)
 
-    async def __call__(
-        self, request: Request, db: t.Optional[Session] = next(get_db())
-    ):
+    async def __call__(self, request: Request):
         """Check if the supplied credentials are valid for this endpoint."""
+        db = next(get_db())
         credentials: HTTPAuthorizationCredentials = await super().__call__(request)
         credentials = credentials.credentials
         if not credentials:
@@ -58,7 +57,9 @@ class JWTBearer(HTTPBearer):
         user_id, _ = token_data["id"], token_data["salt"]
         return int(user_id)
 
-    async def get_user_by_token_websocket(self, websocket: WebSocket) -> int:
+    async def get_user_by_token_websocket(
+        self, websocket: WebSocket
+    ) -> t.Optional[int]:
         """Get user ID by authorization token in the websocket header."""
         authorization = websocket.headers.get("Authorization")
         scheme, credentials = get_authorization_scheme_param(authorization)
