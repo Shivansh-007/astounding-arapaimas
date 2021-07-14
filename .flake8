@@ -2,7 +2,7 @@
 max-line-length=110
 docstring-convention=all
 import-order-style=pycharm
-application_import_names=api
+application_import_names=api,app
 exclude=__pycache__,.cache,
         .git,
         .md,.svg,.png
