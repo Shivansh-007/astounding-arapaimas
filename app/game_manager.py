@@ -1,11 +1,10 @@
-from blessed import Terminal
 from copy import deepcopy
 
+from blessed import Terminal
 
 from app import ascii_art, constants
 from app.chess import ChessBoard
 from app.ui.Colour import ColourScheme
-
 
 
 PIECES = "".join(chr(9812 + x) for x in range(12))
@@ -95,7 +94,7 @@ class Game:
 
     def show_welcome_screen(self) -> str:
         """Prints startup screen and return pressed key."""
-        with self.term.cbreak(), self.term.hidden_cursor():
+        with self.term.cbreak():
             print(self.term.home + self.theme.background + self.term.clear)
             # draw bottom chess pieces
             padding = (
@@ -296,44 +295,43 @@ class Game:
                     b.append(item)
             return b
 
-        print(self.term.fullscreen())
         print(self.term.home + self.term.clear)
         chessboard = ChessBoard(INITIAL_FEN)
-        for i in range(len(self)):
-            # for every col we need to add number too!
-            num = len(self) - i
-            x = self.tile_width // 2
-            y = i * self.tile_height + self.tile_height // 2
-            with self.term.location(x, y):
-                print(num)
-            for j in range(len(self)):
-                self.update_block(i, j)
-        # adding Alphabets for columns
-        for i in range(len(self)):
-            with self.term.location(
-                x * 2 - 1 + i * self.tile_width, len(self) * self.tile_height
-            ):
-                print(str.center(COL[i], len(self)))
-        while True:
-            # available_moves = chessboard.all_available_moves()
-            start_move, end_move = self.handle_arrows()
-            with self.term.location(0, self.term.height - 10):
-                # current_moves = [
-                #     move[2:]
-                #     for move in available_moves
-                #     if (start_move[0] + start_move[1]).lower() == move[:2]
-                # ]
+        with self.term.hidden_cursor():
+            for i in range(len(self)):
+                # for every col we need to add number too!
+                num = len(self) - i
+                x = self.tile_width // 2
+                y = i * self.tile_height + self.tile_height // 2
+                with self.term.location(x, y):
+                    print(num)
+                for j in range(len(self)):
+                    self.update_block(i, j)
+            # adding Alphabets for columns
+            for i in range(len(self)):
+                with self.term.location(
+                    x * 2 - 1 + i * self.tile_width, len(self) * self.tile_height
+                ):
+                    print(str.center(COL[i], len(self)))
+            while True:
+                # available_moves = chessboard.all_available_moves()
+                start_move, end_move = self.handle_arrows()
+                with self.term.location(0, self.term.height - 10):
+                    # current_moves = [
+                    #     move[2:]
+                    #     for move in available_moves
+                    #     if (start_move[0] + start_move[1]).lower() == move[:2]
+                    # ]
 
-                chessboard.move_piece("".join((*start_move, *end_move)).lower())
-                self.fen = chessboard.give_board()
-                self.chess_board = fen_to_board(self.fen)
-            print(8 - int(end_move[1]), COL.index(end_move[0].upper()))
-            self.update_block(
-                len(self) - int(end_move[1]), COL.index(end_move[0].upper())
-            )
-            self.update_block(
-                len(self) - int(start_move[1]), COL.index(start_move[0].upper())
-            )
+                    chessboard.move_piece("".join((*start_move, *end_move)).lower())
+                    self.fen = chessboard.give_board()
+                    self.chess_board = fen_to_board(self.fen)
+                self.update_block(
+                    len(self) - int(end_move[1]), COL.index(end_move[0].upper())
+                )
+                self.update_block(
+                    len(self) - int(start_move[1]), COL.index(start_move[0].upper())
+                )
 
     def update_block(self, row: int, col: int) -> None:
         """Updates block on row and col(we must first mutate actual list first)."""
@@ -352,7 +350,7 @@ class Game:
         """Manages the arrow movement on board."""
         start_move = end_move = False
         while True:
-            with self.term.cbreak(), self.term.hidden_cursor():
+            with self.term.cbreak():
                 inp = self.term.inkey()
             input_key = repr(inp)
             if input_key == "KEY_DOWN":
@@ -402,7 +400,7 @@ class Game:
             menu_choice = self.show_game_menu()
             if menu_choice == "NEW_LOBBY":
                 # make a new lobby
-                pass
+                self.show_game_screen()
             elif menu_choice == "CONNECT_TO_LOBBY":
                 # connect to a lobby
                 pass

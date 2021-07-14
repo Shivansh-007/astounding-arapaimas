@@ -6,11 +6,17 @@ try:
         # clear the second buffer screen
         print(game.term.home + game.term.clear)
 
-    print(game.term.enter_fullscreen)
+    print(game.term.enter_fullscreen + game.term.hide_cursor)
     # Enter full screen once
     game.start_game()
+
 except KeyboardInterrupt:
     # catch if user wants to exit by ctrl+c
     # and exit full-screen
 
-    print(game.term.home + game.term.clear + game.term.exit_fullscreen)
+    print(
+        game.term.home
+        + game.term.clear
+        + game.term.exit_fullscreen
+        + game.term.normal_cursor
+    )
