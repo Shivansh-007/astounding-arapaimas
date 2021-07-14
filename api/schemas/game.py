@@ -11,6 +11,7 @@ class GameBase(BaseModel):
     winner_id: Optional[int] = 0
     player_one_id: int
     player_two_id: Optional[int] = 0
+    board: str
 
 
 class GameCreate(GameBase):
@@ -21,6 +22,7 @@ class GameCreate(GameBase):
     winner_id: int
     player_one_id: int
     player_two_id: int
+    board: str
 
 
 class GameUpdate(GameBase):
@@ -31,6 +33,7 @@ class GameUpdate(GameBase):
     winner_id: int
     player_one_id: int
     player_two_id: int
+    board: str
 
 
 class GameInDBBase(GameBase):
@@ -50,3 +53,4 @@ class Game(GameInDBBase):
     winner_id: int
     player_one_id: int
     player_two_id: int
+    board: str

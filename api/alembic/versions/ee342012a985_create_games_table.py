@@ -26,6 +26,7 @@ def upgrade() -> None:
         sqlalchemy.Column("winner_id", sqlalchemy.BigInteger),
         sqlalchemy.Column("player_one_id", sqlalchemy.BigInteger),
         sqlalchemy.Column("player_two_id", sqlalchemy.BigInteger),
+        sqlalchemy.Column("board", sqlalchemy.String),
     )
 
 

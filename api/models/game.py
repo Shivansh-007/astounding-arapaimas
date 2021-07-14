@@ -12,6 +12,7 @@ class Game(Base):
     winner_id = sqlalchemy.Column(sqlalchemy.BigInteger)
     player_one_id = sqlalchemy.Column(sqlalchemy.BigInteger)
     player_two_id = sqlalchemy.Column(sqlalchemy.BigInteger)
+    board = sqlalchemy.Column(sqlalchemy.String)
 
     @validator("player_one_id")
     def player_one_id_must_be_snowflake(cls, player_one_id: int) -> int:  # noqa: N805

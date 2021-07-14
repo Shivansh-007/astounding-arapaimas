@@ -14,6 +14,28 @@ class CRUDGame(CRUDBase[Game, GameCreate, GameUpdate]):
         """Get a game model object by game_id."""
         return db.query(Game).filter(Game.game_id == game_id).first()
 
+    def get_board_by_id(self, db: Session, *, game_id: int) -> t.Optional[str]:
+        """Get the board of the game with id `game_id`."""
+        game_obj = self.get_by_game_id(db, game_id=game_id)
+        if not game_obj:
+            return None
+
+        return game_obj.board
+
+    def update_board_by_id(
+        self, db: Session, *, game_id: int, board: str
+    ) -> t.Optional[Game]:
+        """Update the board of the game with id `game_id`."""
+        game_obj = self.get_by_game_id(db, game_id=game_id)
+        if not game_obj:
+            return None
+
+        game_obj.board = board
+        db.add(game_obj)
+        db.commit()
+        db.refresh(game_obj)
+        return game_obj
+
     def create(self, db: Session, *, obj_in: GameCreate) -> Game:
         """Make a new game object, and add it to the database."""
         db_obj = Game(
@@ -22,6 +44,7 @@ class CRUDGame(CRUDBase[Game, GameCreate, GameUpdate]):
             player_one_id=obj_in.player_one_id,
             player_two_id=obj_in.player_two_id,
             is_ongoing=obj_in.is_ongoing,
+            board=obj_in.board,
         )
         db.add(db_obj)
         db.commit()
