@@ -73,6 +73,9 @@ class Game:
         self.y = 0
         # self.my_color = 'white' # for future
         self.white_move = True  # this will chnage in multiplayer game
+        self.selected_row = 0
+        self.selected_col = 0
+        # self.handle_arrows()
 
     # TODO:: IS THIS NEEDED?
     def __len__(self) -> int:
@@ -115,9 +118,9 @@ class Game:
             bg = "green"
         piece, color = mapper[self.chess_board[row][col]]
         return (piece, color, bg)
-    
+
     def is_valid_move(self, move: str) -> bool:
-        """Checks if we are actually using our piece"""
+        """Checks if we are actually using our piece."""
         if len(move) != 2:
             return False
         col = move[0]
@@ -149,10 +152,13 @@ class Game:
                 x * 2 - 1 + i * self.tile_width, len(self) * self.tile_height
             ):
                 print(str.center(COL[i], len(self)))
+        self.handle_arrows()
 
     def update_block(self, row: int, col: int) -> None:
         """Updates block on row and col(we must first mutate actual list first)."""
         piece, color, bg = self.get_piece_and_color(row, col)
+        if self.selected_row == row and self.selected_col == col:
+            bg = "red"
         # print(row, col, piece)
         self.draw_tile(
             self.tile_width + col * (self.tile_width + self.offset_x),
@@ -162,18 +168,46 @@ class Game:
             bg=bg,
         )
 
+    def handle_arrows(self) -> None:
+        """Manages the arrow movement on board."""
+        while True:
+            with self.term.cbreak(), self.term.hidden_cursor():
+                inp = self.term.inkey()
+            input_key = repr(inp)
+            if input_key == "KEY_DOWN":
+                if self.selected_row < 7:
+                    self.selected_row += 1
+                    self.update_block(self.selected_row - 1, self.selected_col)
+                    self.update_block(self.selected_row, self.selected_col)
+            elif input_key == "KEY_UP":
+                if self.selected_row > 0:
+                    self.selected_row -= 1
+                    self.update_block(self.selected_row + 1, self.selected_col)
+                    self.update_block(self.selected_row, self.selected_col)
+            elif input_key == "KEY_LEFT":
+                if self.selected_col > 0:
+                    self.selected_col -= 1
+                    self.update_block(self.selected_row, self.selected_col + 1)
+                    self.update_block(self.selected_row, self.selected_col)
+            elif input_key == "KEY_RIGHT":
+                if self.selected_col < 7:
+                    self.selected_col += 1
+                    self.update_block(self.selected_row, self.selected_col - 1)
+                    self.update_block(self.selected_row, self.selected_col)
+
     def start_game(self) -> int:
         """Starts the chess game."""
         self.show_game_screen()
+        return 1
         while True:
             # going to the top and clearing previous inputs
             print(self.term.move_y(self.term.height - 6) + self.term.clear_eos)
             message_string = f'Which piece, {"White" if self.white_move else "Black"}?'
             print(self.term.black_on_blue(self.term.center(message_string)))
-            
+
             while not self.is_valid_move(inp := input()):
                 print(self.term.move_y(self.term.height - 6) + self.term.clear_eos)
-                print('Please make a valid move')
+                print("Please make a valid move")
             col = COL.index(inp[0].upper())
             row = len(self) - int(inp[1])
             inp2 = input()
