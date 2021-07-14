@@ -1,6 +1,6 @@
 from blessed import Terminal
 
-from app import ascii_art
+from app import ascii_art, constants
 
 
 class Player:
@@ -39,24 +39,15 @@ class Game:
         with self.term.cbreak(), self.term.hidden_cursor():
             print(self.term.home + self.term.white_on_black + self.term.clear)
             # draw bottom chess pieces
-            sequence = (
-                ascii_art.PAWN,
-                ascii_art.ROOK,
-                ascii_art.KNIGHT,
-                ascii_art.BISHOP,
-                ascii_art.QUEEN,
-                ascii_art.KING,
-                ascii_art.BISHOP,
-                ascii_art.KNIGHT,
-                ascii_art.ROOK,
-                ascii_art.PAWN,
-            )
             padding = (
                 self.term.width
-                - sum(max(len(p) for p in piece.split("\n")) for piece in sequence)
+                - sum(
+                    max(len(p) for p in piece.split("\n"))
+                    for piece in constants.GAME_WELCOME_TOP
+                )
             ) // 2
             position = 0
-            for piece in sequence:
+            for piece in constants.GAME_WELCOME_TOP:
                 for i, val in enumerate(piece.split("\n")):
                     with self.term.location(
                         padding + position,
@@ -66,20 +57,8 @@ class Game:
                 position += max(len(p) for p in piece.split("\n"))
 
             # draw top chess pieces
-            sequence = (
-                ascii_art.PAWN_I,
-                ascii_art.ROOK_I,
-                ascii_art.KNIGHT_I,
-                ascii_art.BISHOP_I,
-                ascii_art.QUEEN_I,
-                ascii_art.KING_I,
-                ascii_art.BISHOP_I,
-                ascii_art.KNIGHT_I,
-                ascii_art.ROOK_I,
-                ascii_art.PAWN_I,
-            )
             position = 0
-            for piece in sequence:
+            for piece in constants.GAME_WELCOME_BOTTOM:
                 for i, val in enumerate(piece.split("\n")):
                     with self.term.location(padding + position, 1 + i):
                         print(self.term.red_on_black(val))
@@ -112,47 +91,26 @@ class Game:
         """Prints the game-menu screen."""
 
         def print_options() -> None:
-            for i, option in enumerate(options):  # updates the options
-                if i == self.curr_highlight and i != 3:
-                    print(
-                        self.term.move_x(term_positions[i])
-                        + self.term.bold_white_on_green
-                        + str(option)
-                        + self.term.normal
-                        + self.term.move_x(0),
-                        end="",
-                    )
-                elif i == self.curr_highlight and i == 3:
-                    print(
-                        self.term.move_x(term_positions[i])
-                        + self.term.bold_white_on_red
-                        + str(option)
-                        + self.term.normal
-                        + self.term.move_x(0),
-                        end="",
-                    )
-                elif i == 3:
-                    print(
-                        self.term.move_x(term_positions[i])
-                        + self.term.bold_red
-                        + str(option)
-                        + self.term.normal
-                        + self.term.move_x(0),
-                        end="",
-                    )
-                else:
-                    print(
-                        self.term.move_x(term_positions[i])
-                        + self.term.bold_green
-                        + str(option)
-                        + self.term.move_x(0),
-                        end="",
-                    )
+            for i, option in enumerate(
+                constants.MENU_MAPPING.items()
+            ):  # updates the options
+                title, (_, style) = option
+                print(
+                    self.term.move_x(term_positions[i])
+                    + eval(f"self.term.{style}")
+                    + str(title)
+                    + self.term.normal
+                    + self.term.move_x(0),
+                    end="",
+                )
+
             if self.curr_highlight != 9:
                 print(
                     self.term.move_down(3)
                     + self.term.green
-                    + self.term.center(brief[self.curr_highlight])
+                    + self.term.center(
+                        list(constants.MENU_MAPPING.values())[self.curr_highlight][0]
+                    )
                     + self.term.move_x(0)
                     + "\n\n"
                     + self.term.white
@@ -177,13 +135,7 @@ class Game:
                 self.curr_highlight = 0
 
         w, h = self.term.width, self.term.height
-        options = [" Create Game ", " Join Game ", " Settings ", " Exit "]
-        brief = [
-            "Creates an new game and waits for an opponent to join",
-            "Join a pre-existing game of your choice",
-            "Change game settings",
-            "Exit the game",
-        ]
+
         self.curr_highlight = 9
         term_positions = [int(w * 0.38), int(w * 0.46), int(w * 0.54), int(w * 0.62)]
 
