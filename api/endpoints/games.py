@@ -27,6 +27,9 @@ async def new_game_create(request: Request) -> dict:
     user_id = await auth.JWTBearer().get_user_by_token(request)
     db = next(get_db())
 
+    if game.player_already_in_game(db, user_id=user_id):
+        return {"message": "You are already in a game."}
+
     game_id = int(datetime.now().timestamp())
     new_game_obj = schemas.game.GameCreate(
         game_id=game_id,
@@ -86,11 +89,18 @@ class ChessNotifier:
 
         if self.connections[room_name] != {}:
             # Player 1 is already set and is waiting for Player 2
+            if game.player_already_in_game(db, user_id=user_id):
+                return "You are already in a game."
+
             crud_response = game.set_player_two(
                 db, game_id=int(room_name), player_id=user_id
             )
             if isinstance(crud_response, str):
                 return crud_response
+            # Notify the room that player 2 connected
+            await self._notify("INFO::p2", room_name)
+        else:
+            await self._notify("INFO::p1", room_name)
 
         await websocket.accept()
 
