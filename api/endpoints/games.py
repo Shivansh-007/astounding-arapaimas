@@ -112,9 +112,12 @@ class ChessNotifier:
 
         if len(self.connections[room_name]) == 1:  # only one player has joined
             log.debug(f"setting new board for {room_name}")
-            self.chess_boards.update(
-                {f"{room_name}": ChessBoard(INITIAL_GAME)}
-            )  # make a new board for a room
+            if (
+                room_name not in self.chess_boards.keys()
+            ):  # don't init new board in case of disconnect
+                self.chess_boards.update(
+                    {f"{room_name}": ChessBoard(INITIAL_GAME)}
+                )  # make a new board for a room
             await self._notify(f"{INFO_PREFIX}::p1", room_name)
         else:  # hopefully there is no bug were more than 2 can join
             await self._notify(f"{INFO_PREFIX}::p2", room_name)
