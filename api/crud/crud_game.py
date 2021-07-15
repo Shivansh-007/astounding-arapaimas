@@ -56,8 +56,6 @@ class CRUDGame(CRUDBase[Game, GameCreate, GameUpdate]):
     ) -> t.Union[str, Game]:
         """Sets the second player ID for the game after validating it."""
         game_obj = self.get_by_game_id(db, game_id=game_id)
-        if not game_obj:
-            return "Invalid Game ID"
 
         if game_obj.player_two_id:
             return "Game has already started with another user."

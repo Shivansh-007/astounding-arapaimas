@@ -76,17 +76,21 @@ class ChessNotifier:
         db: Optional[Session] = next(get_db()),
     ) -> Optional[str]:
         """Connet a websocket connection and register/update it in the DB."""
+        # Player 2 returns a string in case of invalid game ID (game doesn't exist)
+        # or if the player 2 is already assigned and game has began!
+        print(int(room_name))
         game_obj = game.get_by_game_id(db, game_id=int(room_name))
-        room_existed = False
-        if game_obj:
-            room_existed = True
+
+        if not game_obj:
+            return "Invalid Game ID, make a game with /game/new and then connect here."
+
+        if self.connections[room_name] != {}:
+            # Player 1 is already set and is waiting for Player 2
             crud_response = game.set_player_two(
                 db, game_id=int(room_name), player_id=user_id
             )
             if isinstance(crud_response, str):
                 return crud_response
-        else:
-            return None
 
         await websocket.accept()
 
@@ -94,9 +98,7 @@ class ChessNotifier:
             self.connections[room_name] = {}
         self.connections[room_name].update({user_id: websocket})
 
-        if room_existed:
-            await notifier._notify(f"User#{user_id} has joined the game.", room_name)
-
+        await notifier._notify(f"User#{user_id} has joined the game.", room_name)
         log.info(f"CONNECTIONS : {self.connections[room_name]}")
 
     def remove(
@@ -132,7 +134,7 @@ notifier = ChessNotifier()
 @router.websocket("/{game_id}")
 async def game_talking_endpoint(websocket: WebSocket, game_id: str) -> None:
     """Websocket endpoint for users in `game_id` to talk/send boards to each other."""
-    user_id = await auth.JWTBearer().get_user_by_token_websocket(websocket)
+    user_id: int = await auth.JWTBearer().get_user_by_token_websocket(websocket)
 
     # The room name would be the game ID
     response = await notifier.connect(websocket, game_id, user_id)
