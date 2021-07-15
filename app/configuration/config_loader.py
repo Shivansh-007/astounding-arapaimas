@@ -78,7 +78,11 @@ class ConfigLoader:
             not existing_paths
             and self.paths in Configuration.configuration_paths.values()
         ):
-            term.red_on_black(("No default configuration file found on your system"))
+            print(
+                term.red_on_black(
+                    ("No default configuration file found on your system")
+                )
+            )
             return False
 
         # Choose the first path which is loaded
