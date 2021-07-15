@@ -30,11 +30,16 @@ GAME_WELCOME_TOP = (
 MENU_MAPPING = {
     " Create Game ": (
         "Creates an new game and waits for an opponent to join",
-        "bold_white_on_green",
+        "gm_options",
+        "gm_options_highlight",
     ),
-    " Join Game ": ("Join a pre-existing game of your choice", "bold_white_on_green"),
-    " Settings ": ("Change game settings", "bold_white_on_green"),
-    " Exit ": ("Exit the game", "bold_white_on_red"),
+    " Join Game ": (
+        "Join a pre-existing game of your choice",
+        "gm_options",
+        "gm_options_highlight",
+    ),
+    " Settings ": ("Change game settings", "gm_options", "gm_options_highlight"),
+    " Exit ": ("Exit the game", "gm_exit", "gm_exit_highlight"),
 }
 
 

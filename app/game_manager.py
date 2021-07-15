@@ -31,14 +31,14 @@ class Game:
         self.term = Terminal()
         self.curr_highlight = None
 
-    def create_lobby(self) -> int:
+    def create_lobby(self) -> None:
         """Used to create a game lobby on the server or locally."""
         pass
 
     def show_welcome_screen(self) -> str:
         """Prints startup screen and return pressed key."""
         with self.term.cbreak(), self.term.hidden_cursor():
-            print(self.term.home + self.term.white_on_black + self.term.clear)
+            print(self.term.home + self.theme.background + self.term.clear)
             # draw bottom chess pieces
             padding = (
                 self.term.width
@@ -54,7 +54,7 @@ class Game:
                         padding + position,
                         self.term.height - (len(piece.split("\n")) + 1) + i,
                     ):
-                        print(self.term.green_on_black(val))
+                        print(self.theme.ws_bottom(val))
                 position += max(len(p) for p in piece.split("\n"))
 
             # draw top chess pieces
@@ -62,21 +62,21 @@ class Game:
             for piece in constants.GAME_WELCOME_BOTTOM:
                 for i, val in enumerate(piece.split("\n")):
                     with self.term.location(padding + position, 1 + i):
-                        print(self.term.red_on_black(val))
+                        print(self.theme.ws_top(val))
                 position += max(len(p) for p in piece.split("\n"))
 
             # draw side characters
             for i, char in enumerate(ascii_art.FEN[: self.term.height - 2]):
                 with self.term.location(0, 1 + i):
-                    print(self.term.grey30_on_black(char))
+                    print(self.theme.ws_side_chars(char))
                 with self.term.location(self.term.width, 1 + i):
-                    print(self.term.grey30_on_black(char))
+                    print(self.theme.ws_side_chars(char))
 
             # draw box center message
             message = "PRESS ANY KEY TO START"
             padding = (self.term.width - len(message)) // 2
             with self.term.location(padding, self.term.height // 2):
-                print(self.term.blink_white_on_black(message))
+                print(self.theme.ws_message(message))
 
             # draw THINK box
             padding = (self.term.width - len(ascii_art.THINK.split("\n")[0])) // 2
@@ -84,7 +84,7 @@ class Game:
                 with self.term.location(
                     5, self.term.height - len(ascii_art.THINK.split("\n")) + i
                 ):
-                    print(self.term.grey10_bold_on_black(val))
+                    print(self.theme.ws_think(val))
             keypress = self.term.inkey()
             return keypress
 
@@ -95,20 +95,30 @@ class Game:
             for i, option in enumerate(
                 constants.MENU_MAPPING.items()
             ):  # updates the options
-                title, (_, style) = option
-                print(
-                    self.term.move_x(term_positions[i])
-                    + eval(f"self.term.{style}")
-                    + str(title)
-                    + self.term.normal
-                    + self.term.move_x(0),
-                    end="",
-                )
+                title, (_, style, highlight) = option
+                if i == self.curr_highlight:
+                    print(
+                        self.term.move_x(term_positions[i])
+                        + getattr(self.theme, highlight)
+                        + str(title)
+                        + self.term.normal
+                        + self.term.move_x(0),
+                        end="",
+                    )
+                else:
+                    print(
+                        self.term.move_x(term_positions[i])
+                        + getattr(self.theme, style)
+                        + str(title)
+                        + self.term.normal
+                        + self.term.move_x(0),
+                        end="",
+                    )
 
             if self.curr_highlight != 9:
                 print(
                     self.term.move_down(3)
-                    + self.term.green
+                    + self.theme.gm_option_message
                     + self.term.center(
                         list(constants.MENU_MAPPING.values())[self.curr_highlight][0]
                     )
@@ -185,6 +195,8 @@ class Game:
             response = config.config_loader_screen(self.term)
             if response is False:
                 return
+            else:
+                self.theme = response["theme"]
 
             # call show_game_menu
             menu_choice = self.show_game_menu()

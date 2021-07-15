@@ -18,7 +18,25 @@ class ThemeValidator:
         if not self.validate_type():
             return False
 
-        required_keys = ("text", "board_edges", "white_squares", "black_squares")
+        required_keys = [
+            "background",
+            "text",
+            "board_edges",
+            "white_squares",
+            "black_squares",
+            "game_message",
+            "ws_bottom",
+            "ws_top",
+            "ws_side_chars",
+            "ws_message",
+            "ws_think",
+            "gm_options",
+            "gm_options_highlight",
+            "gm_exit",
+            "gm_exit_highlight",
+            "gm_option_message",
+            "gm_message",
+        ]
         for key in required_keys:
             if key not in self.config.keys():
                 print(

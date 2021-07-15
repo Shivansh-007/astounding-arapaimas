@@ -86,7 +86,7 @@ class ConfigLoader:
         self._load_yaml(term)  # Set config
         return self.config
 
-    def config_loader_screen(self, term: Terminal) -> Optional[bool]:
+    def config_loader_screen(self, term: Terminal) -> Union[dict, bool]:
         """Screen showing the erros and configuration loaded by the module."""
         print(term.home + term.clear + term.move_y(0))
         print(term.bold_black_on_green(term.center("Loading Configurations")))
@@ -110,6 +110,7 @@ class ConfigLoader:
             )
         )
         time.sleep(5)
+        return response
 
     @staticmethod
     def exit(term: Terminal) -> None:
