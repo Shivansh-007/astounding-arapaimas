@@ -91,6 +91,10 @@ class ChessNotifier:
             )
             if isinstance(crud_response, str):
                 return crud_response
+            # Notify the room that player 2 connected
+            await self._notify("INFO::p2", room_name)
+        else:
+            await self._notify("INFO::p1", room_name)
 
         await websocket.accept()
 
