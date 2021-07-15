@@ -78,12 +78,26 @@ class ConfigLoader:
             not existing_paths
             and self.paths in Configuration.configuration_paths.values()
         ):
+            os.makedirs(os.path.dirname(self.paths[0]), exist_ok=True)
+            print(
+                term.purple_on_black(
+                    "Go <link> and generate yourself a token, then paste it here: "
+                ),
+                end="",
+            )
+
+            token = input()
+            with open(self.paths[0], "w+") as f:
+                f.write(f"token: '{str(token)}'")
+
             print(
                 term.red_on_black(
-                    ("No default configuration file found on your system")
+                    (
+                        "No default configuration file found on your system, making one for you!"
+                    )
                 )
             )
-            return False
+            return {"token": token}
 
         # Choose the first path which is loaded
         self.path_loaded = existing_paths[0]
@@ -97,7 +111,7 @@ class ConfigLoader:
         print("\n")
 
         config = self.load_config(term)
-        if not config:
+        if not isinstance(config, dict):
             self.exit(term)
             return False
 
