@@ -70,7 +70,10 @@ class Game:
         self.game_id = None  # the game lobby id that the server will provide for online multiplayer
         self.server_ip = None
         self.theme = ColourScheme(self.term, theme="default")
-        self.chess_board = deepcopy(initial_game)
+        # self.chess_board = deepcopy(initial_game)
+        self.chess = ChessBoard(INITIAL_FEN)
+        # print(ChessBoard(INITIAL_FEN))
+        self.chess_board = self.fen_to_board(self.chess.give_board())
         self.fen = INITIAL_FEN
         self.tile_width = 6
         self.tile_height = 3
@@ -82,6 +85,7 @@ class Game:
         self.white_move = True  # this will change in multiplayer game
         self.selected_row = 0
         self.selected_col = 0
+        self.possible_moves = []
         # self.handle_arrows()
 
     # TODO:: IS THIS NEEDED?
@@ -216,7 +220,9 @@ class Game:
                 print(self.term.center(component))
             print(self.term.move_down(3))  # Sets the cursor to the options position
             print_options()
-            while (pressed:=self.term.inkey().name) != "KEY_ENTER":  # Loops till the user chooses an option
+            while (
+                pressed := self.term.inkey().name
+            ) != "KEY_ENTER":  # Loops till the user chooses an option
                 if pressed == "KEY_TAB":
                     select_option()
                     print_options()
@@ -273,6 +279,7 @@ class Game:
 
     @staticmethod
     def fen_to_board(fen: str) -> list:
+        """Returns board from fen."""
         board = []
         fen_parts = fen.split(" ")
         board_str = fen_parts[0]
@@ -292,7 +299,6 @@ class Game:
     def show_game_screen(self) -> None:
         """Shows the chess board."""
         print(self.term.home + self.term.clear)
-        chessboard = ChessBoard(INITIAL_FEN)
         with self.term.hidden_cursor():
             for i in range(len(self)):
                 # for every col we need to add number too!
@@ -314,10 +320,9 @@ class Game:
                 start_move, end_move = self.handle_arrows()
                 # print(start_move, end_move)
                 with self.term.location(0, self.term.height - 10):
-                    chessboard.move_piece("".join((*start_move, *end_move)).lower())
-                    self.fen = chessboard.give_board()
+                    self.chess.move_piece("".join((*start_move, *end_move)).lower())
+                    self.fen = self.chess.give_board()
                     self.chess_board = self.fen_to_board(self.fen)
-                    print(self.chess_board)
                 self.update_block(
                     len(self) - int(end_move[1]), COL.index(end_move[0].upper())
                 )
@@ -330,6 +335,8 @@ class Game:
         piece, color, bg = self.get_piece_and_color(row, col)
         if self.selected_row == row and self.selected_col == col:
             bg = "red"
+        elif [row, col] in self.possible_moves:
+            bg = "orange"
         self.draw_tile(
             self.tile_width + col * (self.tile_width + self.offset_x),
             row * (self.tile_height + self.offset_y),
@@ -337,6 +344,12 @@ class Game:
             fg=color,
             bg=bg,
         )
+
+    def get_possible_move(self, piece: str) -> list:
+        """Gives possible moves for specific piece."""
+        moves = self.chess.all_available_moves()
+        piece = piece.lower()
+        return [i for i in moves if piece in i]
 
     def handle_arrows(self) -> tuple:
         """Manages the arrow movement on board."""
@@ -366,17 +379,41 @@ class Game:
                     self.update_block(self.selected_row, self.selected_col - 1)
                     self.update_block(self.selected_row, self.selected_col)
             elif input_key == "KEY_ENTER":
+                move = self.chess_board[self.selected_row][self.selected_col]
                 if not start_move:
+                    # if clicked empty block
+                    if move == "em":
+                        continue
                     start_move = (
                         COL[self.selected_col],
                         ROW[len(self) - self.selected_row - 1],
                     )
+                    old_moves = deepcopy(self.possible_moves)
+                    self.possible_moves = []
+                    for i in old_moves:
+                        self.update_block(i[0], i[1])
+                    for i in self.get_possible_move("".join(start_move)):
+                        x = len(self) - int(i[3])
+                        y = COL.index(i[2].upper())
+                        self.possible_moves.append([x, y])
+                        self.update_block(x, y)
                 else:
-                    end_move = (
-                        COL[self.selected_col],
-                        ROW[len(self) - self.selected_row - 1],
-                    )
-                    return start_move, end_move
+                    if [self.selected_row, self.selected_col] in self.possible_moves:
+                        end_move = (
+                            COL[self.selected_col],
+                            ROW[len(self) - self.selected_row - 1],
+                        )
+                        old_moves = deepcopy(self.possible_moves)
+                        self.possible_moves = []
+                        for i in old_moves:
+                            self.update_block(i[0], i[1])
+                        return start_move, end_move
+                    else:
+                        start_move = False
+                        old_moves = deepcopy(self.possible_moves)
+                        self.possible_moves = []
+                        for i in old_moves:
+                            self.update_block(i[0], i[1])
 
     def start_game(self) -> None:
         """
