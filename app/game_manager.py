@@ -24,24 +24,24 @@ initial_game = [
     ["R", "N", "B", "Q", "K", "B", "N", "R"],
 ]
 
-WHITE_PIECES = ("r", "n", "b", "q", "k", "p")
+BLACK_PIECES = ("r", "n", "b", "q", "k", "p")
 
-BLACK_PIECES = ("R", "N", "B", "Q", "K", "P")
+WHITE_PIECES = ("R", "N", "B", "Q", "K", "P")
 
 mapper = {
     "em": ("", "white"),
-    "k": (PIECES[0], "white"),
-    "q": (PIECES[1], "white"),
-    "r": (PIECES[2], "white"),
-    "b": (PIECES[3], "white"),
-    "n": (PIECES[4], "white"),
-    "p": (PIECES[5], "white"),
-    "K": (PIECES[6], "black"),
-    "Q": (PIECES[7], "black"),
-    "R": (PIECES[8], "black"),
-    "B": (PIECES[9], "black"),
-    "N": (PIECES[10], "black"),
-    "P": (PIECES[11], "black"),
+    "K": (PIECES[0], "white"),
+    "Q": (PIECES[1], "white"),
+    "R": (PIECES[2], "white"),
+    "B": (PIECES[3], "white"),
+    "N": (PIECES[4], "white"),
+    "P": (PIECES[5], "white"),
+    "k": (PIECES[6], "black"),
+    "q": (PIECES[7], "black"),
+    "r": (PIECES[8], "black"),
+    "b": (PIECES[9], "black"),
+    "n": (PIECES[10], "black"),
+    "p": (PIECES[11], "black"),
 }
 
 
@@ -216,9 +216,7 @@ class Game:
                 print(self.term.center(component))
             print(self.term.move_down(3))  # Sets the cursor to the options position
             print_options()
-            pressed = ""
-            while pressed != "KEY_ENTER":  # Loops till the user chooses an option
-                pressed = self.term.inkey().name
+            while (pressed:=self.term.inkey().name) != "KEY_ENTER":  # Loops till the user chooses an option
                 if pressed == "KEY_TAB":
                     select_option()
                     print_options()
@@ -273,28 +271,30 @@ class Game:
             return self.chess_board[row_index][col_index] in WHITE_PIECES
         return self.chess_board[row_index][col_index] in BLACK_PIECES
 
+    @staticmethod
+    def fen_to_board(fen: str) -> list:
+        board = []
+        fen_parts = fen.split(" ")
+        board = fen_parts[0]
+        for index, item in enumerate(board):
+            if index == 0:
+                for i in item.split("/"):
+                    if len(i) == 8:
+                        board.append(["em" if _.isnumeric() else _ for _ in i])
+                    else:
+                        row = []
+                        for j in i:
+                            if j.isnumeric():
+                                row = row + ["em"] * int(j)
+                            else:
+                                row.append(j)
+                        board.append(row)
+            else:
+                board.append(item)
+        return board
+
     def show_game_screen(self) -> None:
         """Shows the chess board."""
-
-        def fen_to_board(a: str) -> list:
-            b = []
-            for index, item in enumerate(a.split(" ")):
-                if index == 0:
-                    for i in item.split("/"):
-                        if len(i) == 8:
-                            b.append(["em" if _.isnumeric() else _ for _ in i])
-                        else:
-                            r = []
-                            for j in i:
-                                if j.isnumeric():
-                                    r = r + ["em"] * int(j)
-                                else:
-                                    r.append(j)
-                            b.append(r)
-                else:
-                    b.append(item)
-            return b
-
         print(self.term.home + self.term.clear)
         chessboard = ChessBoard(INITIAL_FEN)
         with self.term.hidden_cursor():
@@ -316,16 +316,12 @@ class Game:
             while True:
                 # available_moves = chessboard.all_available_moves()
                 start_move, end_move = self.handle_arrows()
+                # print(start_move, end_move)
                 with self.term.location(0, self.term.height - 10):
-                    # current_moves = [
-                    #     move[2:]
-                    #     for move in available_moves
-                    #     if (start_move[0] + start_move[1]).lower() == move[:2]
-                    # ]
-
                     chessboard.move_piece("".join((*start_move, *end_move)).lower())
                     self.fen = chessboard.give_board()
-                    self.chess_board = fen_to_board(self.fen)
+                    self.chess_board = self.fen_to_board(self.fen)
+                    print(self.chess_board)
                 self.update_block(
                     len(self) - int(end_move[1]), COL.index(end_move[0].upper())
                 )
