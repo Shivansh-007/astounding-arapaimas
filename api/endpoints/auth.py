@@ -69,6 +69,11 @@ async def auth_callback(request: Request) -> Response:
                     Discord.TOKEN_URL, data=token_params, headers=token_headers
                 )
             ).json()
+
+            log.debug(auth_token)
+            log.debug(token_params)
+            log.debug(token_params)
+
             auth_header = {"Authorization": f"Bearer {auth_token['access_token']}"}
             user = (await client.get(Discord.USER_URL, headers=auth_header)).json()
             token = await auth.reset_user_token(user["id"], user["username"])
