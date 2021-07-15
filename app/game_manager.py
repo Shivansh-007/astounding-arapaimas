@@ -209,14 +209,28 @@ class Game:
         w, h = self.term.width, self.term.height
 
         self.curr_highlight = 9
-        term_positions = [int(w * 0.38), int(w * 0.46), int(w * 0.54), int(w * 0.62)]
+        spacing = int(w * 0.05)
+        padding = (
+            w
+            - sum(len(option) for option in constants.MENU_MAPPING.keys())
+            - spacing * len(constants.MENU_MAPPING.keys())
+        ) // 2
+        position = padding
+        term_positions = []
+        for option in constants.MENU_MAPPING:
+            term_positions.append(position)
+            position += len(option) + spacing
 
         title_split = ascii_art.menu_logo.rstrip().split("\n")
         max_chars = len(max(title_split, key=len))
         with self.term.cbreak(), self.term.hidden_cursor():
             print(self.term.home + self.term.clear + self.term.move_y(int(h * 0.10)))
             for component in title_split:  # Prints centered title
-                component = str(component) + " " * (max_chars - len(component))
+                component = (
+                    str(component)
+                    + " " * (max_chars - len(component))
+                    + "  " * int(w * 0.03)
+                )
                 print(self.term.center(component))
             print(self.term.move_down(3))  # Sets the cursor to the options position
             print_options()
@@ -279,7 +293,7 @@ class Game:
 
     @staticmethod
     def fen_to_board(fen: str) -> list:
-        """Returns board from fen."""
+        """Return the chess array representation of FEN."""
         board = []
         fen_parts = fen.split(" ")
         board_str = fen_parts[0]
