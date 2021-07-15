@@ -365,6 +365,23 @@ class Game:
         piece = piece.lower()
         return [i for i in moves if piece in i]
 
+    def highlight_moves(self, move: str) -> None:
+        """Take a piece and highlights all possible moves."""
+        old_moves = deepcopy(self.possible_moves)
+        self.possible_moves = []
+        # removes old moves
+        for i in old_moves:
+            self.update_block(i[0], i[1])
+        # highlights the possible moves.
+        piece = self.chess_board[self.selected_row][self.selected_col]
+        if piece == "em":
+            return
+        for i in self.get_possible_move("".join(move)):
+            x = len(self) - int(i[3])
+            y = COL.index(i[2].upper())
+            self.possible_moves.append([x, y])
+            self.update_block(x, y)
+
     def handle_arrows(self) -> tuple:
         """Manages the arrow movement on board."""
         start_move = end_move = False
@@ -402,16 +419,13 @@ class Game:
                         COL[self.selected_col],
                         ROW[len(self) - self.selected_row - 1],
                     )
-                    old_moves = deepcopy(self.possible_moves)
-                    self.possible_moves = []
-                    for i in old_moves:
-                        self.update_block(i[0], i[1])
-                    for i in self.get_possible_move("".join(start_move)):
-                        x = len(self) - int(i[3])
-                        y = COL.index(i[2].upper())
-                        self.possible_moves.append([x, y])
-                        self.update_block(x, y)
+                    self.highlight_moves(start_move)
                 else:
+                    # get what location is selected. eg A7
+                    move = (
+                        COL[self.selected_col],
+                        ROW[len(self) - self.selected_row - 1],
+                    )
                     if [self.selected_row, self.selected_col] in self.possible_moves:
                         end_move = (
                             COL[self.selected_col],
@@ -423,6 +437,14 @@ class Game:
                             self.update_block(i[0], i[1])
                         return start_move, end_move
                     else:
+                        # special condition check.
+                        # if enter key is pressed for another piece that can be moved
+                        # change highligting to that piece
+                        self.highlight_moves(move)
+                        # this means the move is a valid move so we set it as start_move
+                        if self.possible_moves:
+                            start_move = move
+                            continue
                         start_move = False
                         old_moves = deepcopy(self.possible_moves)
                         self.possible_moves = []
