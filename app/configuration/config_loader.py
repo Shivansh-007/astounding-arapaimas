@@ -107,13 +107,6 @@ class ConfigLoader:
             self.exit(term)
             return False
 
-        print("\n\n")
-        print(
-            term.bold_black_on_green(
-                term.center("Successfully loaded configuration...")
-            )
-        )
-        time.sleep(5)
         return response
 
     @staticmethod
@@ -125,5 +118,5 @@ class ConfigLoader:
                 term.center("Error loading the configuration. Exiting in 10 seconds...")
             )
         )
-        time.sleep(10)
+        time.sleep(5)
         print(term.clear + term.exit_fullscreen + term.clear)
