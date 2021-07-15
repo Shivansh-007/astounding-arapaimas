@@ -19,6 +19,7 @@ router = APIRouter(tags=["Game Endpoints"], dependencies=[Depends(auth.JWTBearer
 
 INITIAL_GAME = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 BOARD_PREFIX = "BOARD"  # add this to yaml config
+INFO_PREFIX = "INFO"
 
 
 @router.get("/new")
@@ -50,6 +51,7 @@ class ChessNotifier:
     def __init__(self):
         self.connections: dict = defaultdict(dict)
         self.generator = self.get_notification_generator()
+        self.chess_boards: dict = dict()
 
     async def get_notification_generator(self) -> None:
         """Returns the notification generator for sending boards across clients."""
@@ -86,8 +88,7 @@ class ChessNotifier:
 
         if not game_obj:
             return "Invalid Game ID, make a game with /game/new and then connect here."
-
-        if self.connections[room_name] != {}:
+        if len(self.connections[room_name]) != 0:
             # Player 1 is already set and is waiting for Player 2
             if game.player_already_in_game(db, user_id=user_id):
                 return "You are already in a game."
@@ -97,10 +98,6 @@ class ChessNotifier:
             )
             if isinstance(crud_response, str):
                 return crud_response
-            # Notify the room that player 2 connected
-            await self._notify("INFO::p2", room_name)
-        else:
-            await self._notify("INFO::p1", room_name)
 
         await websocket.accept()
 
@@ -110,6 +107,21 @@ class ChessNotifier:
 
         await notifier._notify(f"User#{user_id} has joined the game.", room_name)
         log.info(f"CONNECTIONS : {self.connections[room_name]}")
+
+        # notify players after updating connections dict
+
+        if len(self.connections[room_name]) == 1:  # only one player has joined
+            log.debug(f"setting new board for {room_name}")
+            self.chess_boards.update(
+                {f"{room_name}": ChessBoard(INITIAL_GAME)}
+            )  # make a new board for a room
+            await self._notify(f"{INFO_PREFIX}::p1", room_name)
+        else:  # hopefully there is no bug were more than 2 can join
+            await self._notify(f"{INFO_PREFIX}::p2", room_name)
+            await self._notify(
+                f"{BOARD_PREFIX}::{BOARD_PREFIX}::{self.chess_boards[room_name].give_board()}",
+                room_name,
+            )
 
     def remove(
         self,
@@ -152,11 +164,6 @@ async def game_talking_endpoint(websocket: WebSocket, game_id: str) -> None:
         raise HTTPException(400, response)
 
     try:
-        chess_board = ChessBoard(
-            INITIAL_GAME
-        )  # init a new game as soon as one player connects
-        await notifier._notify(f"{BOARD_PREFIX}::{chess_board.give_board()}", game_id)
-
         while True:
             data = await websocket.receive_text()
 
@@ -181,19 +188,21 @@ async def game_talking_endpoint(websocket: WebSocket, game_id: str) -> None:
                 try:
                     if command == "MOVE":
                         if value:
-                            chess_board.move_piece(value)
+                            notifier.chess_boards[game_id].move_piece(value)
                         await notifier._notify(
-                            f"{BOARD_PREFIX}::{chess_board.give_board()}", game_id
+                            f"{BOARD_PREFIX}::{notifier.chess_boards[game_id].give_board()}",
+                            game_id,
                         )  # send new FEN representation if move is valid
                     elif command == "GET_ALL_MOVES":
                         await notifier._notify(
-                            f"{BOARD_PREFIX}::{chess_board.all_available_moves()}",
+                            f"{BOARD_PREFIX}::{notifier.chess_boards[game_id].all_available_moves()}",
                             game_id,
                         )  # send all moves available for the current active player
                     elif command == "RESET":
-                        chess_board.reset()
+                        notifier.chess_boards[game_id].reset()
                         await notifier._notify(
-                            f"{BOARD_PREFIX}::{chess_board.give_board()}", game_id
+                            f"{BOARD_PREFIX}::{notifier.chess_boards[game_id].give_board()}",
+                            game_id,
                         )  # reset board and send new FEN
                     else:
                         log.debug(f"invalid command {command,value}")
