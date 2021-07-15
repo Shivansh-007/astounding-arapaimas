@@ -1,6 +1,7 @@
 from blessed import Terminal
 
 from app import ascii_art, constants
+from app.colour_scheme import ColourScheme
 from app.configuration.config_loader import ConfigLoader
 
 
@@ -30,6 +31,7 @@ class Game:
         self.chess_board = None
         self.term = Terminal()
         self.curr_highlight = None
+        self.theme = ColourScheme(self.term, constants.Configuration.default_theme)
 
     def create_lobby(self) -> None:
         """Used to create a game lobby on the server or locally."""
@@ -196,7 +198,7 @@ class Game:
             if response is False:
                 return
             else:
-                self.theme = response["theme"]
+                self.theme = ColourScheme(self.term, response["theme"])
 
             # call show_game_menu
             menu_choice = self.show_game_menu()
