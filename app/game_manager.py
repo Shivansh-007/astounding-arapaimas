@@ -381,6 +381,8 @@ class Game:
             y = COL.index(i[2].upper())
             self.possible_moves.append([x, y])
             self.update_block(x, y)
+        with self.term.location(0, self.term.height - 5):
+            print(self.possible_moves)
 
     def handle_arrows(self) -> tuple:
         """Manages the arrow movement on board."""
@@ -422,7 +424,7 @@ class Game:
                     self.highlight_moves(start_move)
                 else:
                     # get what location is selected. eg A7
-                    move = (
+                    current_move = (
                         COL[self.selected_col],
                         ROW[len(self) - self.selected_row - 1],
                     )
@@ -440,10 +442,10 @@ class Game:
                         # special condition check.
                         # if enter key is pressed for another piece that can be moved
                         # change highligting to that piece
-                        self.highlight_moves(move)
+                        self.highlight_moves(current_move)
                         # this means the move is a valid move so we set it as start_move
                         if self.possible_moves:
-                            start_move = move
+                            start_move = current_move
                             continue
                         start_move = False
                         old_moves = deepcopy(self.possible_moves)
