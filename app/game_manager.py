@@ -69,7 +69,8 @@ class Game:
         self.players = None
         self.game_id = None  # the game lobby id that the server will provide for online multiplayer
         self.server_ip = None
-        self.theme = ColourScheme(self.term, theme="default")
+        self.colour_scheme = "default"
+        self.theme = ColourScheme(self.term, theme=self.colour_scheme)
         # self.chess_board = deepcopy(initial_game)
         self.chess = ChessBoard(INITIAL_FEN)
         # print(ChessBoard(INITIAL_FEN))
@@ -269,11 +270,11 @@ class Game:
             print(style(str.center(text, self.tile_width)))
 
     def get_piece_and_color(self, row: int, col: int) -> tuple:
-        """Returns color and piece info of tyhe cell."""
+        """Returns color and piece info of the cell."""
         if (row + col) % 2 == 0:
-            bg = "blue"
+            bg = self.theme.themes[self.colour_scheme]["white_squares"]
         else:
-            bg = "green"
+            bg = self.theme.themes[self.colour_scheme]["black_squares"]
         piece, color = mapper[self.chess_board[row][col]]
         return (piece, color, bg)
 
@@ -348,9 +349,9 @@ class Game:
         """Updates block on row and col(we must first mutate actual list first)."""
         piece, color, bg = self.get_piece_and_color(row, col)
         if self.selected_row == row and self.selected_col == col:
-            bg = "red"
+            bg = self.theme.themes[self.colour_scheme]["selected_square"]
         elif [row, col] in self.possible_moves:
-            bg = "orange"
+            bg = self.theme.themes[self.colour_scheme]["legal_squares"]
         self.draw_tile(
             self.tile_width + col * (self.tile_width + self.offset_x),
             row * (self.tile_height + self.offset_y),
@@ -358,6 +359,10 @@ class Game:
             fg=color,
             bg=bg,
         )
+    
+    @staticmethod
+    def get_row_col(row: int, col: str) -> tuple(int, int):
+        return (8 - int(row), COL.index(col.upper()))
 
     def get_possible_move(self, piece: str) -> list:
         """Gives possible moves for specific piece."""
