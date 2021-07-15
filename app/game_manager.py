@@ -359,9 +359,10 @@ class Game:
             fg=color,
             bg=bg,
         )
-    
+
     @staticmethod
-    def get_row_col(row: int, col: str) -> tuple(int, int):
+    def get_row_col(row: int, col: str) -> tuple:
+        """Returns row and col index."""
         return (8 - int(row), COL.index(col.upper()))
 
     def get_possible_move(self, piece: str) -> list:
