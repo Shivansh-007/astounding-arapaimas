@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   elections:
-    image: ghcr.io/p0lygun/astounding-arapaimas:latest
+    image: ghcr.io/p0lygun/astounding-arapaimas:main
     volumes:
       - ./log:/app/log
       - .:/app:ro
