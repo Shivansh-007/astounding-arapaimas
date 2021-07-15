@@ -299,7 +299,7 @@ class Game:
 
     def show_game_screen(self) -> None:
         """Shows the chess board."""
-        print(self.term.home + self.term.clear)
+        print(self.term.home + self.term.clear + self.theme.background)
         with self.term.hidden_cursor():
             for i in range(len(self)):
                 # for every col we need to add number too!
