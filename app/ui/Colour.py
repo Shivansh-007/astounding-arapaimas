@@ -24,8 +24,10 @@ class ColourScheme:
             "background": "white_on_black",
             "text": "normal",
             "board_edges": "normal",
-            "white_squares": "black_on_white",
-            "black_squares": "normal",
+            "white_squares": "snow",
+            "black_squares": "gray69",
+            "selected_square": "red",
+            "legal_squares": "orange",
             "game_message": "black_on_blue",
             "ws_bottom": "green_on_black",
             "ws_top": "red_on_black",
@@ -33,7 +35,7 @@ class ColourScheme:
             "ws_message": "blink_white_on_black",
             "ws_think": "grey10_bold_on_black",
             "gm_options": "bold_green",
-            "gm_options_highlight": "bold_white_on_green",
+            "gm_options_highlight": "black_on_green",
             "gm_exit": "bold_red",
             "gm_exit_highlight": "bold_white_on_red",
             "gm_option_message": "green",
@@ -44,6 +46,8 @@ class ColourScheme:
             "board_edges": "green_on_black",
             "white_squares": "black_on_green3",
             "black_squares": "green3_on_black",
+            "selected_square": "on_red",
+            "legal_squares": "on_orange",
             "game_message": "black_on_blue",
             "ws_bottom": "green3_on_black",
             "ws_top": "red_on_black",
@@ -51,7 +55,10 @@ class ColourScheme:
             "ws_message": "blink_white_on_black",
             "ws_think": "grey10_bold_on_black",
             "gm_options": "bold_white_on_green",
+            "gm_options_highlight": "black_on_green",
             "gm_exit": "bold_white_on_red",
+            "gm_exit_highlight": "bold_white_on_red",
+            "gm_option_message": "green",
             "gm_message": "white",
         },
     }
@@ -75,15 +82,11 @@ if __name__ == "__main__":
     term = Terminal()
     theme_1 = ColourScheme(term, theme="default")
     theme_2 = ColourScheme(term, theme="mean_green")
-    theme_3 = ColourScheme(term, theme="light_green")
 
-    print(f"Default: {theme_1.text}This is example text.{theme_1.normal}")
+    print(f"1: {theme_1.text}This is example text.{theme_1.normal}")
     print(
         f"2: {theme_2.text}This is another example with a different theme.{theme_2.normal}"
     )
-    print(
-        f"3: {theme_3.board_edges}Garbage text. {theme_3.white_squares} ♛ \
-{theme_3.black_squares} ♕ {theme_3.normal}And normal text."
-    )
 
-    assert type(ColourScheme(term, theme="error")) == type(Exception)
+    # assert type(ColourScheme(term, theme="error")) == type(Exception)
+    # Leads to unhandled exception :| #REMOVE
