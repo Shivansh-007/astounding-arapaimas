@@ -115,7 +115,7 @@ class ConfigLoader:
         print("\n\n")
         print(
             term.bold_white_on_red(
-                term.center("Error loading the configuration. Exiting in 10 seconds...")
+                term.center("Error loading the configuration. Exiting in 5 seconds...")
             )
         )
         time.sleep(5)
