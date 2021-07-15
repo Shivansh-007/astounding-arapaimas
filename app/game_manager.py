@@ -275,22 +275,18 @@ class Game:
     def fen_to_board(fen: str) -> list:
         board = []
         fen_parts = fen.split(" ")
-        board = fen_parts[0]
-        for index, item in enumerate(board):
-            if index == 0:
-                for i in item.split("/"):
-                    if len(i) == 8:
-                        board.append(["em" if _.isnumeric() else _ for _ in i])
-                    else:
-                        row = []
-                        for j in i:
-                            if j.isnumeric():
-                                row = row + ["em"] * int(j)
-                            else:
-                                row.append(j)
-                        board.append(row)
+        board_str = fen_parts[0]
+        for i in board_str.split("/"):
+            if len(i) == 8:
+                board.append(["em" if _.isnumeric() else _ for _ in i])
             else:
-                board.append(item)
+                row = []
+                for j in i:
+                    if j.isnumeric():
+                        row = row + ["em"] * int(j)
+                    else:
+                        row.append(j)
+                board.append(row)
         return board
 
     def show_game_screen(self) -> None:
