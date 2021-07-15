@@ -22,6 +22,20 @@ class CRUDGame(CRUDBase[Game, GameCreate, GameUpdate]):
 
         return game_obj.board
 
+    def get_open_games(self, db: Session) -> list[int]:
+        """Get IDs of all games which have no player 2 set i.e. haven't started yet."""
+        return db.query(Game).filter(Game.player_two_id == 0).all()
+
+    def player_already_in_game(self, db: Session, *, user_id: int) -> bool:
+        """Returns whether the user is already in a game or not."""
+        user_open_games = (
+            db.query(Game)
+            .filter(Game.player_one_id == user_id)
+            .filter(Game.is_ongoing is False)
+            .all()
+        )
+        return len(user_open_games) > 0
+
     def update_board_by_id(
         self, db: Session, *, game_id: int, board: str
     ) -> t.Optional[Game]:
