@@ -3,23 +3,22 @@ from copy import deepcopy
 from blessed import Terminal
 from numpy import ones
 
-from app import ascii_art, constants
+from app import ascii_art
 from app.chess import ChessBoard
-from app.constants import CHESS_STATUS
+from app.constants import (
+    BLACK_PIECES,
+    CHESS_STATUS,
+    COL,
+    GAME_WELCOME_BOTTOM,
+    GAME_WELCOME_TOP,
+    INITIAL_FEN,
+    MENU_MAPPING,
+    PIECES,
+    POSSIBLE_CASTLING_MOVES,
+    ROW,
+    WHITE_PIECES,
+)
 from app.ui.Colour import ColourScheme
-
-PIECES = "".join(chr(9812 + x) for x in range(12))
-print(PIECES)
-COL = ("A", "B", "C", "D", "E", "F", "G", "H")
-ROW = tuple(map(str, range(1, 9)))
-
-INITIAL_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-
-POSSIBLE_CASTLING_MOVES = ("e1g1", "e8g8", "e1c1", "e8c8")
-
-BLACK_PIECES = ("r", "n", "b", "q", "k", "p")
-
-WHITE_PIECES = ("R", "N", "B", "Q", "K", "P")
 
 mapper = {
     "em": ("", "white"),
@@ -110,12 +109,11 @@ class Game:
             padding = (
                 self.term.width
                 - sum(
-                    max(len(p) for p in piece.split("\n"))
-                    for piece in constants.GAME_WELCOME_TOP
+                    max(len(p) for p in piece.split("\n")) for piece in GAME_WELCOME_TOP
                 )
             ) // 2
             position = 0
-            for piece in constants.GAME_WELCOME_TOP:
+            for piece in GAME_WELCOME_TOP:
                 for i, val in enumerate(piece.split("\n")):
                     with self.term.location(
                         padding + position,
@@ -126,7 +124,7 @@ class Game:
 
             # draw top chess pieces
             position = 0
-            for piece in constants.GAME_WELCOME_BOTTOM:
+            for piece in GAME_WELCOME_BOTTOM:
                 for i, val in enumerate(piece.split("\n")):
                     with self.term.location(padding + position, 1 + i):
                         print(self.theme.ws_top(val))
@@ -159,9 +157,7 @@ class Game:
         """Prints the game-menu screen."""
 
         def print_options() -> None:
-            for i, option in enumerate(
-                constants.MENU_MAPPING.items()
-            ):  # updates the options
+            for i, option in enumerate(MENU_MAPPING.items()):  # updates the options
                 title, (_, style, highlight) = option
                 if i == self.curr_highlight:
                     print(
@@ -187,7 +183,7 @@ class Game:
                     self.term.move_down(3)
                     + self.theme.gm_option_message
                     + self.term.center(
-                        list(constants.MENU_MAPPING.values())[self.curr_highlight][0]
+                        list(MENU_MAPPING.values())[self.curr_highlight][0]
                     )
                     + self.term.move_x(0)
                     + "\n\n"
@@ -218,12 +214,12 @@ class Game:
         spacing = int(w * 0.05)
         padding = (
             w
-            - sum(len(option) for option in constants.MENU_MAPPING.keys())
-            - spacing * len(constants.MENU_MAPPING.keys())
+            - sum(len(option) for option in MENU_MAPPING.keys())
+            - spacing * len(MENU_MAPPING.keys())
         ) // 2
         position = padding
         term_positions = []
-        for option in constants.MENU_MAPPING:
+        for option in MENU_MAPPING:
             term_positions.append(position)
             position += len(option) + spacing
 
@@ -280,9 +276,7 @@ class Game:
             + " " * 6
             + "│"
         )
-        print(
-            self.term.move_x(self.w // 13) + "╰" + "─" * 20 + "╯" + self.term.normal
-        )
+        print(self.term.move_x(self.w // 13) + "╰" + "─" * 20 + "╯" + self.term.normal)
 
     def box(
         self,

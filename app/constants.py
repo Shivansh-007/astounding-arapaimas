@@ -41,3 +41,17 @@ MENU_MAPPING = {
 }
 
 CHESS_STATUS = {"NORMAL": 0, "CHECK": 1, "CHECKMATE": 2, "STALEMATE": 3}
+
+PIECES = "".join(chr(9812 + x) for x in range(12))
+
+COL = ("A", "B", "C", "D", "E", "F", "G", "H")
+
+ROW = tuple(map(str, range(1, 9)))
+
+INITIAL_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+
+POSSIBLE_CASTLING_MOVES = ("e1g1", "e8g8", "e1c1", "e8c8")
+
+BLACK_PIECES = ("r", "n", "b", "q", "k", "p")
+
+WHITE_PIECES = ("R", "N", "B", "Q", "K", "P")
