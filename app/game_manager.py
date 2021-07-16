@@ -3,23 +3,22 @@ from copy import deepcopy
 from blessed import Terminal
 from numpy import ones
 
-from app import ascii_art, constants
+from app import ascii_art
 from app.chess import ChessBoard
-from app.constants import CHESS_STATUS
+from app.constants import (
+    BLACK_PIECES,
+    CHESS_STATUS,
+    COL,
+    GAME_WELCOME_BOTTOM,
+    GAME_WELCOME_TOP,
+    INITIAL_FEN,
+    MENU_MAPPING,
+    PIECES,
+    POSSIBLE_CASTLING_MOVES,
+    ROW,
+    WHITE_PIECES,
+)
 from app.ui.Colour import ColourScheme
-
-PIECES = "".join(chr(9812 + x) for x in range(12))
-print(PIECES)
-COL = ("A", "B", "C", "D", "E", "F", "G", "H")
-ROW = tuple(map(str, range(1, 9)))
-
-INITIAL_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-
-POSSIBLE_CASTLING_MOVES = ("e1g1", "e8g8", "e1c1", "e8c8")
-
-BLACK_PIECES = ("r", "n", "b", "q", "k", "p")
-
-WHITE_PIECES = ("R", "N", "B", "Q", "K", "P")
 
 mapper = {
     "em": ("", "white"),
@@ -83,7 +82,7 @@ class Game:
         self.y = 0
         self.chat_enabled = False
         # self.my_color = 'white' # for future
-        self.selected_row = 0
+        self.selected_row = 6
         self.selected_col = 0
         self.possible_moves = []
         self.flag = True
@@ -94,9 +93,10 @@ class Game:
         # self.term.number_of_colors = 256
         # self.handle_arrows()
         self.moves_played = 0
-        self.moves_limit = 4  # TODO:: MAKE THIS DYNAMIC
+        self.moves_limit = 100  # TODO:: MAKE THIS DYNAMIC
         self.visible_layers = 8
         self.hidden_layer = ones((self.visible_layers, self.visible_layers))
+        self.king_check = False
 
     def __len__(self) -> int:
         return 8
@@ -113,12 +113,11 @@ class Game:
             padding = (
                 self.term.width
                 - sum(
-                    max(len(p) for p in piece.split("\n"))
-                    for piece in constants.GAME_WELCOME_TOP
+                    max(len(p) for p in piece.split("\n")) for piece in GAME_WELCOME_TOP
                 )
             ) // 2
             position = 0
-            for piece in constants.GAME_WELCOME_TOP:
+            for piece in GAME_WELCOME_TOP:
                 for i, val in enumerate(piece.split("\n")):
                     with self.term.location(
                         padding + position,
@@ -129,7 +128,7 @@ class Game:
 
             # draw top chess pieces
             position = 0
-            for piece in constants.GAME_WELCOME_BOTTOM:
+            for piece in GAME_WELCOME_BOTTOM:
                 for i, val in enumerate(piece.split("\n")):
                     with self.term.location(padding + position, 1 + i):
                         print(self.theme.ws_top(val))
@@ -162,9 +161,7 @@ class Game:
         """Prints the game-menu screen."""
 
         def print_options() -> None:
-            for i, option in enumerate(
-                constants.MENU_MAPPING.items()
-            ):  # updates the options
+            for i, option in enumerate(MENU_MAPPING.items()):  # updates the options
                 title, (_, style, highlight) = option
                 if i == self.curr_highlight:
                     print(
@@ -190,7 +187,7 @@ class Game:
                     self.term.move_down(3)
                     + self.theme.gm_option_message
                     + self.term.center(
-                        list(constants.MENU_MAPPING.values())[self.curr_highlight][0]
+                        list(MENU_MAPPING.values())[self.curr_highlight][0]
                     )
                     + self.term.move_x(0)
                     + "\n\n"
@@ -221,12 +218,12 @@ class Game:
         spacing = int(w * 0.05)
         padding = (
             w
-            - sum(len(option) for option in constants.MENU_MAPPING.keys())
-            - spacing * len(constants.MENU_MAPPING.keys())
+            - sum(len(option) for option in MENU_MAPPING.keys())
+            - spacing * len(MENU_MAPPING.keys())
         ) // 2
         position = padding
         term_positions = []
-        for option in constants.MENU_MAPPING:
+        for option in MENU_MAPPING:
             term_positions.append(position)
             position += len(option) + spacing
 
@@ -532,6 +529,25 @@ class Game:
         with self.term.location(50, 10):
             print(self.theme.game_message, message)
 
+    def highlight_check(self) -> None:
+        """Higligh king if its CHECK."""
+        for i, row in enumerate(self.chess_board):
+            for j, col in enumerate(row):
+                if (col == "K" and self.is_white_turn()) or (
+                    col == "k" and not self.is_white_turn()
+                ):
+                    piece, color, _ = self.get_piece_meta(i, j)
+                    self.draw_tile(
+                        self.tile_width + j * (self.tile_width + self.offset_x),
+                        i * (self.tile_height + self.offset_y),
+                        self.x_shift,
+                        self.y_shift,
+                        text=piece,
+                        fg=color,
+                        bg=self.theme.themes[self.colour_scheme]["check"],
+                    )
+                    break
+
     def show_game_screen(self) -> None:
         """Shows the chess board."""
         print(self.term.home + self.term.clear + self.theme.background)
@@ -562,10 +578,13 @@ class Game:
                 ):
                     print(str.center(COL[i], len(self)))
             while True:
+                # self.print_message(' '*10)
                 start_move, end_move = self.handle_arrows()
                 with self.term.location(0, self.term.height - 10):
                     move = "".join((*start_move, *end_move)).lower()
                     self.chess.move_piece(move)
+                    self.king_check = False
+
                     self.fen = self.chess.give_board()
                     self.chess_board = self.fen_to_board(self.fen)
                     self.chess_status_display(
@@ -588,7 +607,11 @@ class Game:
                     self.print_message("THATS CHECKMATE!")
                     self.show_game_over()
                 elif self.get_game_status() == CHESS_STATUS["CHECK"]:
-                    pass
+                    # TODO:: NOTIFY KING
+                    # print('WE ENTERED TO UPDATE ALL')
+                    self.print_message("CHECK DUDE")
+                    self.highlight_check()
+                    self.king_check = True
                 if (
                     self.moves_played % self.moves_limit == 0
                     and self.visible_layers > 2
@@ -753,6 +776,8 @@ class Game:
                         start_move = False
                         end_move = False
                         self.highlight_moves(start_move)
+            if self.king_check:
+                self.highlight_check()
 
     def start_game(self) -> None:
         """
