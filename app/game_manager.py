@@ -15,6 +15,8 @@ ROW = tuple(map(str, range(1, 9)))
 
 INITIAL_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
+POSSIBLE_CASTLING_MOVES = ("e1g1", "e8g8", "e1c1", "e8c8")
+
 BLACK_PIECES = ("r", "n", "b", "q", "k", "p")
 
 WHITE_PIECES = ("R", "N", "B", "Q", "K", "P")
@@ -495,7 +497,7 @@ class Game:
 
         with self.term.hidden_cursor():
             for i in range(len(self)):
-                # for every col we need to add number too!
+                # Adding Numbers to indicate rows
                 num = len(self) - i
                 x = self.tile_width // 2
                 y = i * self.tile_height + self.tile_height // 2
@@ -504,7 +506,7 @@ class Game:
 
                 for j in range(len(self)):
                     self.update_block(i, j)
-            # adding Alphabets for columns
+            # Adding Numbers to indicate columns
             for i in range(len(self)):
                 with self.term.location(
                     x * 2 - 1 + i * self.tile_width + self.x_shift,
@@ -514,8 +516,8 @@ class Game:
             while True:
                 start_move, end_move = self.handle_arrows()
                 with self.term.location(0, self.term.height - 10):
-                    print("".join((*start_move, *end_move)).lower())
-                    self.chess.move_piece("".join((*start_move, *end_move)).lower())
+                    move = "".join((*start_move, *end_move)).lower()
+                    self.chess.move_piece(move)
                     self.fen = self.chess.give_board()
                     self.chess_board = self.fen_to_board(self.fen)
                     self.show_prev_move(
@@ -524,7 +526,9 @@ class Game:
                         x_pos=COL.index(end_move[0].upper()),
                         y_pos=8 - int(end_move[1]),
                     )
-                    # 3333333333333333333333333
+                if move in POSSIBLE_CASTLING_MOVES:
+                    self.update_board()
+                    continue
                 self.update_block(
                     len(self) - int(end_move[1]), COL.index(end_move[0].upper())
                 )
@@ -536,7 +540,6 @@ class Game:
                     self.print_message("THATS CHECKMATE!")
                     self.show_game_over()
                 elif self.get_game_status() == CHESS_STATUS["CHECK"]:
-                    # TODO:: NOTIFY KING
                     pass
                 if (
                     self.moves_played % self.moves_limit == 0
@@ -548,9 +551,7 @@ class Game:
                     self.hidden_layer[-invisible_layers:, :] = 0
                     self.hidden_layer[:, 0:invisible_layers] = 0
                     self.hidden_layer[:, -invisible_layers:] = 0
-                    for i in range(8):
-                        for j in range(8):
-                            self.update_block(i, j)
+                    self.update_board()
 
     def update_block(self, row: int, col: int) -> None:
         """Updates block on row and col(we must first mutate actual list first)."""
@@ -577,6 +578,12 @@ class Game:
             fg=color,
             bg=bg,
         )
+
+    def update_board(self) -> None:
+        """Updates whole board when needed. Simplest Solution but expensive."""
+        for i in range(8):
+            for j in range(8):
+                self.update_block(i, j)
 
     @staticmethod
     def get_row_col(row: int, col: str) -> tuple:
