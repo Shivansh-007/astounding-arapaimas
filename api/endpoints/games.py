@@ -25,7 +25,27 @@ INFO_PREFIX = "INFO"
 
 @router.get("/new")
 async def new_game_create(request: Request) -> dict:
-    """Make a new chess game and send link to game room."""
+    """
+    Make a new chess game and send link to game room.
+
+    A user can only make a room if they don't have one existing already,
+    so it first verifies if the user is in a game or not and then creates
+    one for them.
+
+    ### Example python script
+    ```py
+    import httpx
+
+    token = input("TOKEN: ")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    r = httpx.put("http://127.0.0.1:8000/game/new", headers=headers)
+    game_endpoint = r.json()["room"]
+
+    print(game_endpoint)
+    # /game/1626296948
+    ```
+    """
     user_id = await auth.JWTBearer().get_user_by_token(request)
     db = next(get_db())
 
@@ -179,7 +199,33 @@ notifier = ChessNotifier()
 
 @router.websocket("/{game_id}")
 async def game_talking_endpoint(websocket: WebSocket, game_id: str) -> None:
-    """Websocket endpoint for users in `game_id` to talk/send boards to each other."""
+    """
+    Websocket endpoint for users in `game_id` to talk/send boards to each other.
+
+    All the communication in two games is done and here, the player moves, player joins,
+    reseting the game, player chat, etc.
+
+    ### Example python code
+    ```py
+    import websocket
+
+    token = input("TOKEN: ")
+    headers = {"Authorization": f"Bearer {token}"}
+    game_id = 1626474066  # Example
+
+    ws_local = websocket.WebSocket()
+    ws_local.connect(f"ws://127.0.0.1:800/game/{game_id}")
+
+    try:
+        while True:
+            data_received = ws_local.recv()
+            ...
+    except Exception as error:
+        print(error)
+        ws_local.close(reason=fb"Program terminated with error: {error}")
+        raise
+    ```
+    """
     user_id: int = await auth.JWTBearer().get_user_by_token_websocket(websocket)
 
     # The room name would be the game ID

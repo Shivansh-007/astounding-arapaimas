@@ -105,6 +105,20 @@ async def auth_callback(request: Request) -> Response:
 
 @router.put("/validate_token")
 async def validate_user_token(_: Request, token: Token) -> dict:
-    """Validate user's token and return if it is valid or not."""
+    """
+    Validate user's token and return if it is valid or not.
+
+    #### Example Python Script
+    ```py
+    import httpx
+
+    token = input()
+    r = httpx.put("http://127.0.0.1:8000/validate_token", json={"token": token})
+    if r.status != 200:
+        print("Invalid token!")
+    else:
+        print("Perfect! Let's go...")
+    ```
+    """
     user_id = await auth.JWTBearer().get_user_by_plain_token(token.token)
     return {"message": user_id}
