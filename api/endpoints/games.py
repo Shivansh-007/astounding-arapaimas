@@ -190,7 +190,33 @@ notifier = ChessNotifier()
 
 @router.websocket("/{game_id}")
 async def game_talking_endpoint(websocket: WebSocket, game_id: str) -> None:
-    """Websocket endpoint for users in `game_id` to talk/send boards to each other."""
+    """
+    Websocket endpoint for users in `game_id` to talk/send boards to each other.
+
+    All the communication in two games is done and here, the player moves, player joins,
+    reseting the game, player chat, etc.
+
+    ### Example python code
+    ```py
+    import websocket
+
+    token = input("TOKEN: ")
+    headers = {"Authorization": f"Bearer {token}"}
+    game_id = 1626474066  # Example
+
+    ws_local = websocket.WebSocket()
+    ws_local.connect(f"ws://127.0.0.1:800/game/{game_id}")
+
+    try:
+        while True:
+            data_received = ws_local.recv()
+            ...
+    except Exception as error:
+        print(error)
+        ws_local.close(reason=fb"Program terminated with error: {error}")
+        raise
+    ```
+    """
     user_id: int = await auth.JWTBearer().get_user_by_token_websocket(websocket)
 
     # The room name would be the game ID
