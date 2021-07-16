@@ -451,108 +451,66 @@ class Game:
             while True:
                 # available_moves = chessboard.all_available_moves()
                 # get the latest board
-                if self.player.player_id == 1:
-                    if self.is_white_turn():
-                        start_move, end_move = self.handle_arrows()
-                        # print(start_move, end_move)
-                        with self.term.location(0, self.term.height - 10):
-                            move = "".join((*start_move, *end_move)).lower()
-                            self.chess.move_piece(move)
-                            self.fen = self.chess.give_board()
-                            self.chess_board = self.fen_to_board(self.fen)
-                        self.update_block(
-                            len(self) - int(end_move[1]), COL.index(end_move[0].upper())
-                        )
-                        self.update_block(
-                            len(self) - int(start_move[1]),
-                            COL.index(start_move[0].upper()),
-                        )
-                        self.moves_played += 1
-                        if (
-                            self.moves_played % self.moves_limit == 0
-                            and self.visible_layers > 2
-                        ):
-                            self.visible_layers -= 2
-                            invisible_layers = (8 - self.visible_layers) // 2
-                            self.hidden_layer[0:invisible_layers, :] = 0
-                            self.hidden_layer[-invisible_layers:, :] = 0
-                            self.hidden_layer[:, 0:invisible_layers] = 0
-                            self.hidden_layer[:, -invisible_layers:] = 0
-                            for i in range(8):
-                                for j in range(8):
-                                    self.update_block(i, j)
+                if self.player.player_id == 1 and not self.is_white_turn():
+                    new_board = False
+                    while not new_board:
+                        data = self.web_socket.recv().split("::")
+                        if data[0] == "BOARD" and data[1] == "BOARD":
+                            if self.is_white_turn(data[2]):
+                                self.chess.set_fen(data[2])
+                                self.fen = self.chess.give_board()
+                                new_board = True
 
-                        # update the server
-                        self.web_socket.send(f"BOARD::MOVE::{move}")
-                        try:
-                            data = [""]
-                            self.web_socket.send("BOARD::GET_BOARD")
-                            while data[0] != "BOARD":
-                                data = self.web_socket.recv().split("::")
-                            self.chess.set_fen(data[2])
-                        except Exception:
-                            print(data)
-                            raise
+                if self.player.player_id == 2 and self.is_white_turn():
+                    new_board = False
+                    while not new_board:
+                        data = self.web_socket.recv().split("::")
+                        if data[0] == "BOARD" and data[1] == "BOARD":
+                            if not self.is_white_turn(data[2]):
+                                self.chess.set_fen(data[2])
+                                self.fen = self.chess.give_board()
+                                new_board = True
 
-                    else:
-                        new_board = False
-                        while not new_board:
-                            data = self.web_socket.recv().split("::")
-                            if data[0] == "BOARD" and data[1] == "BOARD":
-                                if self.is_white_turn(data[2]):
-                                    self.chess.set_fen(data[2])
-                                    self.fen = self.chess.give_board()
-                                    new_board = True
+                start_move, end_move = self.handle_arrows()
+                # print(start_move, end_move)
+                with self.term.location(0, self.term.height - 10):
+                    move = "".join((*start_move, *end_move)).lower()
+                    self.chess.move_piece(move)
+                    self.fen = self.chess.give_board()
+                    self.chess_board = self.fen_to_board(self.fen)
+                self.update_block(
+                    len(self) - int(end_move[1]), COL.index(end_move[0].upper())
+                )
+                self.update_block(
+                    len(self) - int(start_move[1]),
+                    COL.index(start_move[0].upper()),
+                )
+                self.moves_played += 1
+                if (
+                    self.moves_played % self.moves_limit == 0
+                    and self.visible_layers > 2
+                ):
+                    self.visible_layers -= 2
+                    invisible_layers = (8 - self.visible_layers) // 2
+                    self.hidden_layer[0:invisible_layers, :] = 0
+                    self.hidden_layer[-invisible_layers:, :] = 0
+                    self.hidden_layer[:, 0:invisible_layers] = 0
+                    self.hidden_layer[:, -invisible_layers:] = 0
+                    for i in range(8):
+                        for j in range(8):
+                            self.update_block(i, j)
 
-                elif self.player.player_id == 2:
-                    if not self.is_white_turn():
-                        start_move, end_move = self.handle_arrows()
-                        # print(start_move, end_move)
-                        with self.term.location(0, self.term.height - 10):
-                            move = "".join((*start_move, *end_move)).lower()
-                            self.chess.move_piece(move)
-                            self.fen = self.chess.give_board()
-                            self.chess_board = self.fen_to_board(self.fen)
-                        self.update_block(
-                            len(self) - int(end_move[1]), COL.index(end_move[0].upper())
-                        )
-                        self.update_block(
-                            len(self) - int(start_move[1]),
-                            COL.index(start_move[0].upper()),
-                        )
-                        self.moves_played += 1
-                        if (
-                            self.moves_played % self.moves_limit == 0
-                            and self.visible_layers > 2
-                        ):
-                            self.visible_layers -= 2
-                            invisible_layers = (8 - self.visible_layers) // 2
-                            self.hidden_layer[0:invisible_layers, :] = 0
-                            self.hidden_layer[-invisible_layers:, :] = 0
-                            self.hidden_layer[:, 0:invisible_layers] = 0
-                            self.hidden_layer[:, -invisible_layers:] = 0
-                            for i in range(8):
-                                for j in range(8):
-                                    self.update_block(i, j)
-                        self.web_socket.send(f"BOARD::MOVE::{move}")
-                        try:
-                            data = [""]
-                            self.web_socket.send("BOARD::GET_BOARD")
-                            while data[0] != "BOARD":
-                                data = self.web_socket.recv().split("::")
-                            self.chess.set_fen(data[2])
-                        except Exception:
-                            print(data)
-                            raise
-                    else:
-                        new_board = False
-                        while not new_board:
-                            data = self.web_socket.recv().split("::")
-                            if data[0] == "BOARD" and data[1] == "BOARD":
-                                if not self.is_white_turn(data[2]):
-                                    self.chess.set_fen(data[2])
-                                    self.fen = self.chess.give_board()
-                                    new_board = True
+                # update the server
+                self.web_socket.send(f"BOARD::MOVE::{move}")
+                try:
+                    data = [""]
+                    self.web_socket.send("BOARD::GET_BOARD")
+                    while data[0] != "BOARD":
+                        data = self.web_socket.recv().split("::")
+                    self.chess.set_fen(data[2])
+                except Exception:
+                    print(data)
+                    raise
 
     def update_block(self, row: int, col: int) -> None:
         """Updates block on row and col(we must first mutate actual list first)."""
