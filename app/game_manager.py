@@ -2,10 +2,10 @@ import json
 import os.path
 from copy import deepcopy
 
-import appdirs
 import httpx
 from blessed import Terminal
 from numpy import ones
+from platformdirs import user_cache_dir
 
 from app import ascii_art, constants
 from app.chess import ChessBoard
@@ -105,7 +105,7 @@ class Game:
         the user for the token, validate it through the API and store it
         in user's cache.
         """
-        cache_path = f'{appdirs.user_cache_dir("stealth_chess")}/token.json'
+        cache_path = f'{user_cache_dir("stealth_chess")}/token.json'
         if os.path.exists(cache_path):
             # Read file token from file as cache exists
             with open(cache_path, "r", encoding="utf-8") as file:

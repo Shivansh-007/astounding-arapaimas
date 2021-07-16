@@ -24,12 +24,12 @@ pydantic = "^1.8.2"
 tenacity = "^8.0.0"
 websocket-client = "^1.1.0"
 numpy = "^1.21.0"
-appdirs = "^1.4.4"
 watchgod = "^0.7"
 aiofiles = "^0.7.0"
 websockets = "^9.1"
 uvicorn = "^0.14.0"
 Jinja2 = "^3.0.1"
+platformdirs = "^2.0.2"
 
 [tool.poetry.dev-dependencies]
 flake8 = "^3.8"
