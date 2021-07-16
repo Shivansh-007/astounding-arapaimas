@@ -53,6 +53,8 @@ class ChessNotifier:
         self.generator = self.get_notification_generator()
         self.chess_boards: dict = dict()
 
+        self.db = next(get_db())
+
     async def get_notification_generator(self) -> None:
         """Returns the notification generator for sending boards across clients."""
         while True:
@@ -79,20 +81,19 @@ class ChessNotifier:
         """Connet a websocket connection and register/update it in the DB."""
         # Player 2 returns a string in case of invalid game ID (game doesn't exist)
         # or if the player 2 is already assigned and game has began!
-        db = next(get_db())
-        game_obj = game.get_by_game_id(db, game_id=int(room_name))
+        game_obj = game.get_by_game_id(self.db, game_id=int(room_name))
 
         if not game_obj:
             return "Invalid Game ID, make a game with /game/new and then connect here."
         if len(self.connections[room_name]) == 1:  # one user in room
             player_count = game.get_player_count(
-                db, game_id=int(room_name)
+                self.db, game_id=int(room_name)
             )  # get how many in db
             if player_count == 1:  # only one in db
-                if game.player_already_in_game(db, user_id=user_id):
+                if game.player_already_in_game(self.db, user_id=user_id):
                     return "You are already in a game."
                 crud_response = game.set_player_two(
-                    db, game_id=int(room_name), player_id=user_id
+                    self.db, game_id=int(room_name), player_id=user_id
                 )
                 if isinstance(crud_response, str):
                     return crud_response
@@ -141,23 +142,19 @@ class ChessNotifier:
             )
             log.debug(f"{room_name} not empty, don't init board")
 
-    def remove(
-        self,
-        _: WebSocket,
-        room_name: str,
-        user_id: int,
-        db: Optional[Session] = next(get_db()),
-    ) -> None:
+    def remove(self, _: WebSocket, room_name: str, user_id: int) -> None:
         """Remove a websocket connection and close the chess game and mark the winner."""
         self.connections[room_name].pop(user_id)
 
         if self.connections[room_name]:
             remaing_user = next(iter(self.connections[room_name].keys()))
-            game.mark_game_winner(db, game_id=int(room_name), winner_id=remaing_user)
+            game.mark_game_winner(
+                self.db, game_id=int(room_name), winner_id=remaing_user
+            )
         else:
             del self.connections[room_name]
             del self.chess_boards[room_name]
-            game.remove(db, id=int(room_name))
+            game.remove(self.db, id=int(room_name))
 
         log.info(
             f"CONNECTION REMOVED\nREMAINING CONNECTIONS : {self.connections[room_name]}"
