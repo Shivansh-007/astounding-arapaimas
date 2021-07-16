@@ -514,6 +514,7 @@ class Game:
             while True:
                 start_move, end_move = self.handle_arrows()
                 with self.term.location(0, self.term.height - 10):
+                    print("".join((*start_move, *end_move)).lower())
                     self.chess.move_piece("".join((*start_move, *end_move)).lower())
                     self.fen = self.chess.give_board()
                     self.chess_board = self.fen_to_board(self.fen)
@@ -531,10 +532,7 @@ class Game:
                     len(self) - int(start_move[1]), COL.index(start_move[0].upper())
                 )
                 self.moves_played += 1
-                if (
-                    self.get_game_status() == CHESS_STATUS["CHECKMATE"]
-                    or self.moves_played == 3
-                ):
+                if self.get_game_status() == CHESS_STATUS["CHECKMATE"]:
                     self.print_message("THATS CHECKMATE!")
                     self.show_game_over()
                 elif self.get_game_status() == CHESS_STATUS["CHECK"]:
