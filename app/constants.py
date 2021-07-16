@@ -39,3 +39,5 @@ MENU_MAPPING = {
     " Settings ": ("Change game settings", "gm_options", "gm_options_highlight"),
     " Exit ": ("Exit the game", "gm_exit", "gm_exit_highlight"),
 }
+
+CHESS_STATUS = {"NORMAL": 0, "CHECK": 1, "CHECKMATE": 2, "STALEMATE": 3}

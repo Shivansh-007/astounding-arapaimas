@@ -5,6 +5,7 @@ from numpy import ones
 
 from app import ascii_art, constants
 from app.chess import ChessBoard
+from app.constants import CHESS_STATUS
 from app.ui.Colour import ColourScheme
 
 PIECES = "".join(chr(9812 + x) for x in range(12))
@@ -13,16 +14,6 @@ COL = ("A", "B", "C", "D", "E", "F", "G", "H")
 ROW = tuple(map(str, range(1, 9)))
 
 INITIAL_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-initial_game = [
-    ["r", "n", "b", "q", "k", "b", "n", "r"],
-    ["p"] * 8,
-    ["em"] * 8,
-    ["em"] * 8,
-    ["em"] * 8,
-    ["em"] * 8,
-    ["P"] * 8,
-    ["R", "N", "B", "Q", "K", "B", "N", "R"],
-]
 
 BLACK_PIECES = ("r", "n", "b", "q", "k", "p")
 
@@ -66,8 +57,11 @@ class Game:
 
     def __init__(self):
         self.term = Terminal()
+        # TODO:: USE THIS
         self.players = None
+        # TODO:: USE THIS
         self.game_id = None  # the game lobby id that the server will provide for online multiplayer
+        # TODO:: USE THIS
         self.server_ip = None
         self.colour_scheme = "default"
         self.theme = ColourScheme(self.term, theme=self.colour_scheme)
@@ -76,17 +70,17 @@ class Game:
         self.fen = INITIAL_FEN
         self.tile_width = 6
         self.tile_height = 3
+        # TODO:: REMOVE THESE 2 if they're gonna be 0(they are used for spaces b/w tiles)
         self.offset_x = 0
         self.offset_y = 0
         self.x = 0
         self.y = 0
         # self.my_color = 'white' # for future
-        self.white_move = True  # this will change in multiplayer game
         self.selected_row = 0
         self.selected_col = 0
         self.possible_moves = []
         self.moves_played = 0
-        self.moves_limit = 4  # TODO:: MAKE THIS DYNAMIC
+        self.moves_limit = 100  # TODO:: MAKE THIS DYNAMIC
         self.visible_layers = 8
         self.hidden_layer = ones((self.visible_layers, self.visible_layers))
 
@@ -298,6 +292,10 @@ class Game:
                 board.append(row)
         return board
 
+    def get_game_status(self) -> int:
+        """Get status of board."""
+        return self.chess.board.status
+
     def show_game_screen(self) -> None:
         """Shows the chess board."""
         print(self.term.home + self.term.clear + self.theme.background)
@@ -332,6 +330,12 @@ class Game:
                     len(self) - int(start_move[1]), COL.index(start_move[0].upper())
                 )
                 self.moves_played += 1
+                # print(CHESS_STATUS)
+                if self.get_game_status() == CHESS_STATUS["CHECKMATE"]:
+                    print("THATS CHECKMATE!")
+                elif self.get_game_status() == CHESS_STATUS["CHECK"]:
+                    # TODO:: NOTIFY KING
+                    pass
                 if (
                     self.moves_played % self.moves_limit == 0
                     and self.visible_layers > 2
