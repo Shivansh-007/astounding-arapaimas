@@ -1,4 +1,5 @@
 from copy import deepcopy
+from typing import Optional
 
 from blessed import Terminal
 from numpy import ones
@@ -516,18 +517,23 @@ class Game:
         """Display game over after checkmate."""
         # end the game and return to game_menu
         with self.term.cbreak():
-            self.print_message("PRESS Q TO EXIT, ANY OTHER KEY TO RESTART")
             inp = self.term.inkey()
             if inp in ("q", "Q"):
                 self.show_game_menu()
             else:
+                self.__init__()
                 self.show_game_screen()
 
-    def print_message(self, message: str) -> None:
+    def print_message(self, message: str, content: Optional[str] = "") -> None:
         """Display message in the screen. For example CHECK, CHECKMATE."""
         # need to change the position of the message
-        with self.term.location(50, 10):
-            print(self.theme.game_message, message)
+        self.chess_status_display(
+            y_pos_box=int(self.h * 0.4 + 2),
+            title=message,
+            content=content,
+            box_width=45,
+            is_last_move=False,
+        )
 
     def highlight_check(self) -> None:
         """Higligh king if its CHECK."""
@@ -603,13 +609,22 @@ class Game:
                     len(self) - int(start_move[1]), COL.index(start_move[0].upper())
                 )
                 self.moves_played += 1
-                if self.get_game_status() == CHESS_STATUS["CHECKMATE"]:
-                    self.print_message("THATS CHECKMATE!")
+                if (
+                    self.get_game_status() == CHESS_STATUS["CHECKMATE"]
+                    or self.moves_played % 4 == 0
+                ):
+                    self.print_message(
+                        "CHECKMATE. GAME OVER",
+                        content="PRESS Q TO EXIT, ANY OTHER KEY TO RESTART",
+                    )
                     self.show_game_over()
-                elif self.get_game_status() == CHESS_STATUS["CHECK"]:
+                elif (
+                    self.get_game_status() == CHESS_STATUS["CHECK"]
+                    or self.moves_played % 5 == 0
+                ):
                     # TODO:: NOTIFY KING
                     # print('WE ENTERED TO UPDATE ALL')
-                    self.print_message("CHECK DUDE")
+                    self.print_message("CHECK", content="PLAY YOUR KING")
                     self.highlight_check()
                     self.king_check = True
                 if (
