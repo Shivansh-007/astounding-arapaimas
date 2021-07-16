@@ -296,17 +296,32 @@ class Game:
         """Get status of board."""
         return self.chess.board.status
 
+    def show_game_over(self) -> None:
+        """Display game over after checkmate."""
+        # end the game and return to game_menu
+        with self.term.cbreak():
+            self.print_message("PRESS Q TO EXIT, ANY OTHER KEY TO RESTART")
+            inp = self.term.inkey()
+            if inp in ("q", "Q"):
+                self.show_game_menu()
+            else:
+                self.show_game_screen()
+
+    def print_message(self, message: str) -> None:
+        """Display message in the screen. For example CHECK, CHECKMATE."""
+        # need to change the position of the message
+        with self.term.location(50, 10):
+            print(self.theme.game_message, message)
+
     def show_game_screen(self) -> None:
         """Shows the chess board."""
         print(self.term.home + self.term.clear + self.theme.background)
         with self.term.hidden_cursor():
             for i in range(len(self)):
                 # for every col we need to add number too!
-                num = len(self) - i
+                # num = len(self) - i
                 x = self.tile_width // 2
-                y = i * self.tile_height + self.tile_height // 2
-                with self.term.location(x, y):
-                    print(num)
+                # y = i * self.tile_height + self.tile_height // 2
                 for j in range(len(self)):
                     self.update_block(i, j)
             # adding Alphabets for columns
@@ -331,8 +346,12 @@ class Game:
                 )
                 self.moves_played += 1
                 # print(CHESS_STATUS)
-                if self.get_game_status() == CHESS_STATUS["CHECKMATE"]:
-                    print("THATS CHECKMATE!")
+                if (
+                    self.get_game_status() == CHESS_STATUS["CHECKMATE"]
+                    or self.moves_played == 3
+                ):
+                    self.print_message("THATS CHECKMATE!")
+                    self.show_game_over()
                 elif self.get_game_status() == CHESS_STATUS["CHECK"]:
                     # TODO:: NOTIFY KING
                     pass
@@ -405,8 +424,6 @@ class Game:
             y = COL.index(i[2].upper())
             self.possible_moves.append([x, y])
             self.update_block(x, y)
-        with self.term.location(0, self.term.height - 5):
-            print(self.possible_moves)
 
     def handle_arrows(self) -> tuple:
         """Manages the arrow movement on board."""
