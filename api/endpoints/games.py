@@ -88,16 +88,27 @@ class ChessNotifier:
 
         if not game_obj:
             return "Invalid Game ID, make a game with /game/new and then connect here."
-        if len(self.connections[room_name]) != 0:
-            # Player 1 is already set and is waiting for Player 2
-            if game.player_already_in_game(db, user_id=user_id):
-                return "You are already in a game."
+        if len(self.connections[room_name]) == 1:  # one user in room
+            player_count = game.get_player_count(
+                db, game_id=room_name
+            )  # get how many in db
+            if player_count == 1:  # only one in db
+                if game.player_already_in_game(db, user_id=user_id):
+                    return "You are already in a game."
+                crud_response = game.set_player_two(
+                    db, game_id=int(room_name), player_id=user_id
+                )
+                if isinstance(crud_response, str):
+                    return crud_response
 
-            crud_response = game.set_player_two(
-                db, game_id=int(room_name), player_id=user_id
-            )
-            if isinstance(crud_response, str):
-                return crud_response
+            elif (
+                player_count == 2
+                and user_id not in self.connections[room_name].keys()
+                and user_id in [game_obj.player_one_id, game_obj.player_two_id]
+            ):  # coming after disconnect
+                self.connections[room_name].update({user_id: websocket})
+            else:
+                return "only 2 player per game lobby allowed"
 
         await websocket.accept()
 
@@ -105,22 +116,22 @@ class ChessNotifier:
             self.connections[room_name] = {}
         self.connections[room_name].update({user_id: websocket})
 
-        await notifier._notify(f"User#{user_id} has joined the game.", room_name)
+        await notifier._notify(
+            f"{INFO_PREFIX}::JOIN::User#{user_id} has joined the game.", room_name
+        )
         log.info(f"CONNECTIONS : {self.connections[room_name]}")
 
         # notify players after updating connections dict
 
-        if (
-            room_name not in self.chess_boards.keys()
-        ):  # don't init new board in case of disconnect
+        if room_name not in self.chess_boards.keys():  # first connection
             if len(self.connections[room_name]) == 1:  # only one player has joined
+                await self._notify(f"{INFO_PREFIX}::PLAYER::p1", room_name)
+            else:  # hopefully there is no bug were more than 2 can join
+                await self._notify(f"{INFO_PREFIX}::PLAYER::p2", room_name)
                 log.debug(f"setting new board for {room_name}")
                 self.chess_boards.update(
                     {f"{room_name}": ChessBoard(INITIAL_GAME)}
                 )  # make a new board for a room
-                await self._notify(f"{INFO_PREFIX}::p1", room_name)
-            else:  # hopefully there is no bug were more than 2 can join
-                await self._notify(f"{INFO_PREFIX}::p2", room_name)
                 await self._notify(
                     f"{BOARD_PREFIX}::{BOARD_PREFIX}::{self.chess_boards[room_name].give_board()}",
                     room_name,
