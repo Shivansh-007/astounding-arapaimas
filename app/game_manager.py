@@ -1,4 +1,5 @@
 import json
+import logging
 import os.path
 from copy import deepcopy
 
@@ -6,6 +7,10 @@ import appdirs
 import httpx
 from blessed import Terminal
 from numpy import ones
+from websocket import (
+    WebSocket,
+    WebSocketBadStatusException,
+)
 
 from app import ascii_art, constants
 from app.chess import ChessBoard
@@ -48,12 +53,15 @@ mapper = {
     "p": (PIECES[11], "black"),
 }
 
+log = logging.getLogger(__name__)
+
 
 class Player:
     """Class for defining a player."""
 
-    def __init__(self, player_id: str):
-        self.id = player_id
+    def __init__(self, token: str = None):
+        self.token = token
+        self.player_id = None
         self.game_history = None  # stores the result of the previous games
 
 
@@ -70,9 +78,18 @@ class Game:
 
     def __init__(self):
         self.term = Terminal()
-        self.players = None
+        self.player = None
         self.game_id = None  # the game lobby id that the server will provide for online multiplayer
-        self.server_ip = None
+        self.local_testing = True
+        self.server = "astounding-arapaimas-pr-38.up.railway.app"
+        self.secure = "s"
+        self.port = ""
+        if self.local_testing:
+            self.port = ":8000"
+            self.server = "127.0.0.1"
+            self.secure = ""
+        self.headers = dict()
+        self.web_socket = WebSocket()
         self.colour_scheme = "default"
         self.theme = ColourScheme(self.term, theme=self.colour_scheme)
         self.chess = ChessBoard(INITIAL_FEN)
@@ -90,8 +107,9 @@ class Game:
         self.selected_col = 0
         self.possible_moves = []
         self.moves_played = 0
-        self.moves_limit = 4  # TODO:: MAKE THIS DYNAMIC
+        self.moves_limit = 1000  # TODO:: MAKE THIS DYNAMIC
         self.visible_layers = 8
+        self.screen = "fullscreen"
         self.hidden_layer = ones((self.visible_layers, self.visible_layers))
 
     def __len__(self) -> int:
@@ -117,7 +135,10 @@ class Game:
         token_ok = False
         token = input("Enter your API token")
         while not token_ok:
-            r = httpx.put("http://127.0.0.1:8000/validate_token", json={"token": token})
+            r = httpx.put(
+                f"http{self.secure}://{self.server}{self.port}/validate_token",
+                json={"token": token},
+            )
             if r.status_code != 200:
                 token = input("Invalid token, enter the correct one: ")
             else:
@@ -135,9 +156,65 @@ class Game:
             json.dump(token, file, ensure_ascii=False, indent=4)
         return token["token"]
 
-    def create_lobby(self) -> int:
+    def create_lobby(self) -> str:
         """Used to create a game lobby on the server or locally."""
-        pass
+        if not self.game_id:
+            try:
+                httpx.get(f"http{self.secure}://{self.server}{self.port}/")
+            except httpx.ConnectError:
+                return f"{self.term.blink}Can't connect to  {self.server}"
+            # server up
+            try:
+                token = self.ask_or_get_token()
+            except KeyboardInterrupt:
+                return "BACK"
+            self.player = Player(token)
+            # get the game id
+            self.headers.update({"Authorization": f"Bearer {self.player.token}"})
+            try:
+                resp = httpx.get(
+                    f"http{self.secure}://{self.server}{self.port}/game/new",
+                    headers=self.headers,
+                )
+                if resp.status_code != 200:
+                    raise httpx.HTTPError
+                self.game_id = resp.json()["room"]
+                return "New lobby created Press [ENTER] to continue"
+            except httpx.HTTPError:
+                return f"server returned Error code {resp.status_code}"
+        else:
+            return "Restart Game ..."
+
+    def connect_to_lobby(self) -> str:
+        """Connect to a lobby after Creating one or with game_id."""
+        if not self.game_id:
+            self.game_id = input("Enter Game id :- ").strip()
+        if not self.player:
+            self.player = Player(self.ask_or_get_token())
+            self.headers = {"Authorization": f"Bearer {self.player.token}"}
+        ws_url = f"ws{self.secure}://{self.server}{self.port}/game/{self.game_id}"
+        data = ""
+        try:
+
+            self.web_socket.connect(ws_url, header=self.headers)
+            data = "INFO::INIT"
+            print(self.term.home + self.theme.background + self.term.clear)
+            print(f"lobby id :- {self.game_id}")
+            print("Waiting for all players to connect ....")
+
+            while data[1] != "READY":
+
+                data = self.web_socket.recv().split("::")
+                if data[1] == "PLAYER":  # INFO::PLAYER::p1
+                    self.player.player_id = int(data[2][-1])
+                    print(self.player.player_id)
+            return "READY"
+
+        except WebSocketBadStatusException:
+            return "Sever Error pls.. Try Again...."
+        except Exception:
+            log.error(f"{data} {ws_url}")
+            raise
 
     def show_welcome_screen(self) -> str:
         """Prints startup screen and return pressed key."""
@@ -342,7 +419,7 @@ class Game:
 
     def show_game_screen(self) -> None:
         """Shows the chess board."""
-        print(self.term.home + self.term.clear + self.theme.background)
+        print(self.term.home + self.theme.background + self.term.clear)
         with self.term.hidden_cursor():
             for i in range(len(self)):
                 # for every col we need to add number too!
@@ -359,34 +436,123 @@ class Game:
                     x * 2 - 1 + i * self.tile_width, len(self) * self.tile_height
                 ):
                     print(str.center(COL[i], len(self)))
+
+            try:
+                self.web_socket.send("BOARD::GET_BOARD")
+                no = True
+                while no:
+                    data = self.web_socket.recv().split("::")
+                    self.chess.set_fen(data[2])
+                    self.fen = self.chess.give_board()
+                    no = False
+            except Exception:
+                print(data)
+                raise
             while True:
                 # available_moves = chessboard.all_available_moves()
-                start_move, end_move = self.handle_arrows()
-                # print(start_move, end_move)
-                with self.term.location(0, self.term.height - 10):
-                    self.chess.move_piece("".join((*start_move, *end_move)).lower())
-                    self.fen = self.chess.give_board()
-                    self.chess_board = self.fen_to_board(self.fen)
-                self.update_block(
-                    len(self) - int(end_move[1]), COL.index(end_move[0].upper())
-                )
-                self.update_block(
-                    len(self) - int(start_move[1]), COL.index(start_move[0].upper())
-                )
-                self.moves_played += 1
-                if (
-                    self.moves_played % self.moves_limit == 0
-                    and self.visible_layers > 2
-                ):
-                    self.visible_layers -= 2
-                    invisible_layers = (8 - self.visible_layers) // 2
-                    self.hidden_layer[0:invisible_layers, :] = 0
-                    self.hidden_layer[-invisible_layers:, :] = 0
-                    self.hidden_layer[:, 0:invisible_layers] = 0
-                    self.hidden_layer[:, -invisible_layers:] = 0
-                    for i in range(8):
-                        for j in range(8):
-                            self.update_block(i, j)
+                # get the latest board
+                if self.player.player_id == 1:
+                    if self.is_white_turn():
+                        start_move, end_move = self.handle_arrows()
+                        # print(start_move, end_move)
+                        with self.term.location(0, self.term.height - 10):
+                            move = "".join((*start_move, *end_move)).lower()
+                            self.chess.move_piece(move)
+                            self.fen = self.chess.give_board()
+                            self.chess_board = self.fen_to_board(self.fen)
+                        self.update_block(
+                            len(self) - int(end_move[1]), COL.index(end_move[0].upper())
+                        )
+                        self.update_block(
+                            len(self) - int(start_move[1]),
+                            COL.index(start_move[0].upper()),
+                        )
+                        self.moves_played += 1
+                        if (
+                            self.moves_played % self.moves_limit == 0
+                            and self.visible_layers > 2
+                        ):
+                            self.visible_layers -= 2
+                            invisible_layers = (8 - self.visible_layers) // 2
+                            self.hidden_layer[0:invisible_layers, :] = 0
+                            self.hidden_layer[-invisible_layers:, :] = 0
+                            self.hidden_layer[:, 0:invisible_layers] = 0
+                            self.hidden_layer[:, -invisible_layers:] = 0
+                            for i in range(8):
+                                for j in range(8):
+                                    self.update_block(i, j)
+
+                        # update the server
+                        self.web_socket.send(f"BOARD::MOVE::{move}")
+                        try:
+                            data = [""]
+                            self.web_socket.send("BOARD::GET_BOARD")
+                            while data[0] != "BOARD":
+                                data = self.web_socket.recv().split("::")
+                            self.chess.set_fen(data[2])
+                        except Exception:
+                            print(data)
+                            raise
+
+                    else:
+                        new_board = False
+                        while not new_board:
+                            data = self.web_socket.recv().split("::")
+                            if data[0] == "BOARD" and data[1] == "BOARD":
+                                if self.is_white_turn(data[2]):
+                                    self.chess.set_fen(data[2])
+                                    self.fen = self.chess.give_board()
+                                    new_board = True
+
+                elif self.player.player_id == 2:
+                    if not self.is_white_turn():
+                        start_move, end_move = self.handle_arrows()
+                        # print(start_move, end_move)
+                        with self.term.location(0, self.term.height - 10):
+                            move = "".join((*start_move, *end_move)).lower()
+                            self.chess.move_piece(move)
+                            self.fen = self.chess.give_board()
+                            self.chess_board = self.fen_to_board(self.fen)
+                        self.update_block(
+                            len(self) - int(end_move[1]), COL.index(end_move[0].upper())
+                        )
+                        self.update_block(
+                            len(self) - int(start_move[1]),
+                            COL.index(start_move[0].upper()),
+                        )
+                        self.moves_played += 1
+                        if (
+                            self.moves_played % self.moves_limit == 0
+                            and self.visible_layers > 2
+                        ):
+                            self.visible_layers -= 2
+                            invisible_layers = (8 - self.visible_layers) // 2
+                            self.hidden_layer[0:invisible_layers, :] = 0
+                            self.hidden_layer[-invisible_layers:, :] = 0
+                            self.hidden_layer[:, 0:invisible_layers] = 0
+                            self.hidden_layer[:, -invisible_layers:] = 0
+                            for i in range(8):
+                                for j in range(8):
+                                    self.update_block(i, j)
+                        self.web_socket.send(f"BOARD::MOVE::{move}")
+                        try:
+                            data = [""]
+                            self.web_socket.send("BOARD::GET_BOARD")
+                            while data[0] != "BOARD":
+                                data = self.web_socket.recv().split("::")
+                            self.chess.set_fen(data[2])
+                        except Exception:
+                            print(data)
+                            raise
+                    else:
+                        new_board = False
+                        while not new_board:
+                            data = self.web_socket.recv().split("::")
+                            if data[0] == "BOARD" and data[1] == "BOARD":
+                                if not self.is_white_turn(data[2]):
+                                    self.chess.set_fen(data[2])
+                                    self.fen = self.chess.give_board()
+                                    new_board = True
 
     def update_block(self, row: int, col: int) -> None:
         """Updates block on row and col(we must first mutate actual list first)."""
@@ -420,9 +586,12 @@ class Game:
         piece = piece.lower()
         return [i for i in moves if piece in i]
 
-    def is_white_turn(self) -> bool:
+    def is_white_turn(self, fen: str = None) -> bool:
         """Returns if it's white's turn."""
-        fen_parts = self.fen.split(" ")
+        if fen:
+            fen_parts = fen.split(" ")
+        else:
+            fen_parts = self.fen.split(" ")
         return fen_parts[1] == "w"
 
     def highlight_moves(self, move: str) -> None:
@@ -525,6 +694,11 @@ class Game:
                         end_move = False
                         self.highlight_moves(start_move)
 
+    def reset_class(self) -> None:
+        """Reset player game room info."""
+        self.game_id = None
+        self.player.player_id = None
+
     def start_game(self) -> None:
         """
         Starts the chess game.
@@ -536,16 +710,33 @@ class Game:
             print(self.term.clear + self.term.exit_fullscreen)
         else:
             # call show_game_menu
-            menu_choice = self.show_game_menu()
-            if menu_choice == "NEW_LOBBY":
-                # make a new lobby
-                self.show_game_screen()
-            elif menu_choice == "CONNECT_TO_LOBBY":
-                # connect to a lobby
-                pass
-            elif menu_choice == "SETTINGS":
-                # open settings menu
-                pass
-            elif menu_choice == "EXIT":
-                # exit the game peacefully
-                print(self.term.clear + self.term.exit_fullscreen + self.term.clear)
+
+            menu_choice = "NO_EXIT"
+            while menu_choice != "EXIT":
+                if self.player:
+                    self.reset_class()
+                menu_choice = self.show_game_menu()
+                if menu_choice == "NEW_LOBBY":
+                    # make a new lobby
+                    print(self.create_lobby())
+                    resp = self.connect_to_lobby()
+                    if resp != "READY":
+                        print(resp)
+                elif menu_choice == "CONNECT_TO_LOBBY":
+                    # connect to a lobby
+                    resp = self.connect_to_lobby()
+                    if resp != "READY":
+                        print(resp)
+                elif menu_choice == "SETTINGS":
+                    # open settings menu
+                    pass
+                print(self.term.home + self.theme.background + self.term.clear)
+                if self.player.player_id:
+                    try:
+                        self.show_game_screen()
+                    except Exception as e:
+                        print(e)
+                        raise
+            # exit the game peacefully
+            self.web_socket.close()
+            print(self.term.clear + self.term.exit_fullscreen + self.term.clear)
