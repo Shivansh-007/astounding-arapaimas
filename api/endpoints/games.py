@@ -20,10 +20,32 @@ INITIAL_GAME = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 BOARD_PREFIX = "BOARD"  # add this to yaml config
 INFO_PREFIX = "INFO"
 
+# todo add Chat
+
 
 @router.get("/new")
 async def new_game_create(request: Request) -> dict:
-    """Make a new chess game and send link to game room."""
+    """
+    Make a new chess game and send link to game room.
+
+    A user can only make a room if they don't have one existing already,
+    so it first verifies if the user is in a game or not and then creates
+    one for them.
+
+    ### Example python script
+    ```py
+    import httpx
+
+    token = input("TOKEN: ")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    r = httpx.put("http://127.0.0.1:8000/game/new", headers=headers)
+    game_endpoint = r.json()["room"]
+
+    print(game_endpoint)
+    # /game/1626296948
+    ```
+    """
     user_id = await auth.JWTBearer().get_user_by_token(request)
     db = next(get_db())
 
@@ -41,7 +63,7 @@ async def new_game_create(request: Request) -> dict:
     )
     game.create(db, obj_in=new_game_obj)
 
-    return {"room": f"/game/{game_id}"}
+    return {"room": f"{game_id}"}
 
 
 class ChessNotifier:
@@ -121,18 +143,18 @@ class ChessNotifier:
 
         if room_name not in self.chess_boards.keys():  # first connection
             if len(self.connections[room_name]) == 1:  # only one player has joined
-                await self._notify(f"{INFO_PREFIX}::PLAYER::p1", room_name)
-
+                await self._notify_private(
+                    websocket, f"{INFO_PREFIX}::PLAYER::p1", room_name
+                )
             else:  # hopefully there is no bug were more than 2 can join
-                await self._notify(f"{INFO_PREFIX}::PLAYER::p2", room_name)
+                await self._notify_private(
+                    websocket, f"{INFO_PREFIX}::PLAYER::p2", room_name
+                )
                 log.debug(f"setting new board for {room_name}")
                 self.chess_boards.update(
-                    {f"{room_name}": ChessBoard(game_obj.board, int(room_name))}
-                )  # make a new chessboard object for a room
-                await self._notify(
-                    f"{BOARD_PREFIX}::{BOARD_PREFIX}::{self.chess_boards[room_name].give_board()}",
-                    room_name,
-                )
+                    {f"{room_name}": ChessBoard(INITIAL_GAME, int(room_name))}
+                )  # make a new board for a room
+                await self._notify(f"{INFO_PREFIX}::READY", room_name)
         else:
             # coming here after disconnect
             await self._notify(
@@ -164,13 +186,46 @@ class ChessNotifier:
         for _, websocket in self.connections[room_name].items():
             await websocket.send_text(message)
 
+    async def _notify_private(
+        self, web_socket: WebSocket, message: str, room_name: str
+    ) -> None:
+        """Notify only one user."""
+        if web_socket in self.connections[room_name].values():
+            await web_socket.send_text(message)
+
 
 notifier = ChessNotifier()
 
 
 @router.websocket("/{game_id}")
 async def game_talking_endpoint(websocket: WebSocket, game_id: str) -> None:
-    """Websocket endpoint for users in `game_id` to talk/send boards to each other."""
+    """
+    Websocket endpoint for users in `game_id` to talk/send boards to each other.
+
+    All the communication in two games is done and here, the player moves, player joins,
+    reseting the game, player chat, etc.
+
+    ### Example python code
+    ```py
+    import websocket
+
+    token = input("TOKEN: ")
+    headers = {"Authorization": f"Bearer {token}"}
+    game_id = 1626474066  # Example
+
+    ws_local = websocket.WebSocket()
+    ws_local.connect(f"ws://127.0.0.1:800/game/{game_id}")
+
+    try:
+        while True:
+            data_received = ws_local.recv()
+            ...
+    except Exception as error:
+        print(error)
+        ws_local.close(reason=fb"Program terminated with error: {error}")
+        raise
+    ```
+    """
     user_id: int = await auth.JWTBearer().get_user_by_token_websocket(websocket)
 
     # The room name would be the game ID
@@ -205,7 +260,7 @@ async def game_talking_endpoint(websocket: WebSocket, game_id: str) -> None:
                         if value:
                             notifier.chess_boards[game_id].move_piece(value)
                         await notifier._notify(
-                            f"{BOARD_PREFIX}::{notifier.chess_boards[game_id].give_board()}",
+                            f"{BOARD_PREFIX}::{BOARD_PREFIX}::{notifier.chess_boards[game_id].give_board()}",
                             game_id,
                         )  # send new FEN representation if move is valid
                     elif command == "GET_ALL_MOVES":
@@ -213,10 +268,16 @@ async def game_talking_endpoint(websocket: WebSocket, game_id: str) -> None:
                             f"{BOARD_PREFIX}::{notifier.chess_boards[game_id].all_available_moves()}",
                             game_id,
                         )  # send all moves available for the current active player
+                    elif command == "GET_BOARD":
+                        await notifier._notify_private(
+                            websocket,
+                            f"{BOARD_PREFIX}::{BOARD_PREFIX}::{notifier.chess_boards[game_id].give_board()}",
+                            game_id,
+                        )
                     elif command == "RESET":
                         notifier.chess_boards[game_id].reset()
                         await notifier._notify(
-                            f"{BOARD_PREFIX}::{notifier.chess_boards[game_id].give_board()}",
+                            f"{BOARD_PREFIX}::{BOARD_PREFIX}::{notifier.chess_boards[game_id].give_board()}",
                             game_id,
                         )  # reset board and send new FEN
                     else:
