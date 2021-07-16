@@ -93,7 +93,6 @@ class Game:
         self.visible_layers = 8
         self.hidden_layer = ones((self.visible_layers, self.visible_layers))
 
-
     def __len__(self) -> int:
         return 8
 
@@ -497,7 +496,7 @@ class Game:
         with self.term.hidden_cursor():
             for i in range(len(self)):
                 # for every col we need to add number too!
-                # num = len(self) - i
+                num = len(self) - i
                 x = self.tile_width // 2
                 y = i * self.tile_height + self.tile_height // 2
                 with self.term.location(x + self.x_shift, y + self.y_shift):
