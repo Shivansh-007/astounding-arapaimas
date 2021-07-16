@@ -23,7 +23,27 @@ INFO_PREFIX = "INFO"
 
 @router.get("/new")
 async def new_game_create(request: Request) -> dict:
-    """Make a new chess game and send link to game room."""
+    """
+    Make a new chess game and send link to game room.
+
+    A user can only make a room if they don't have one existing already,
+    so it first verifies if the user is in a game or not and then creates
+    one for them.
+
+    ### Example python script
+    ```py
+    import httpx
+
+    token = input("TOKEN: ")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    r = httpx.put("http://127.0.0.1:8000/game/new", headers=headers)
+    game_endpoint = r.json()["room"]
+
+    print(game_endpoint)
+    # /game/1626296948
+    ```
+    """
     user_id = await auth.JWTBearer().get_user_by_token(request)
     db = next(get_db())
 
