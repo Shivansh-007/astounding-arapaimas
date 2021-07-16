@@ -531,7 +531,7 @@ class Game:
             y_pos_box=int(self.h * 0.4 + 2),
             title=message,
             content=content,
-            box_width=45,
+            box_width=20,
             is_last_move=False,
         )
 
@@ -590,6 +590,10 @@ class Game:
                     move = "".join((*start_move, *end_move)).lower()
                     self.chess.move_piece(move)
                     self.king_check = False
+                    content = (
+                        "WHITEs MOVE" if not self.is_white_turn() else "BLACKs MOVE"
+                    )
+                    self.print_message("STATUS", content=content)
 
                     self.fen = self.chess.give_board()
                     self.chess_board = self.fen_to_board(self.fen)
@@ -609,21 +613,13 @@ class Game:
                     len(self) - int(start_move[1]), COL.index(start_move[0].upper())
                 )
                 self.moves_played += 1
-                if (
-                    self.get_game_status() == CHESS_STATUS["CHECKMATE"]
-                    or self.moves_played % 4 == 0
-                ):
+                if self.get_game_status() == CHESS_STATUS["CHECKMATE"]:
                     self.print_message(
                         "CHECKMATE. GAME OVER",
-                        content="PRESS Q TO EXIT, ANY OTHER KEY TO RESTART",
+                        content="PRESS Q TO EXIT",
                     )
                     self.show_game_over()
-                elif (
-                    self.get_game_status() == CHESS_STATUS["CHECK"]
-                    or self.moves_played % 5 == 0
-                ):
-                    # TODO:: NOTIFY KING
-                    # print('WE ENTERED TO UPDATE ALL')
+                elif self.get_game_status() == CHESS_STATUS["CHECK"]:
                     self.print_message("CHECK", content="PLAY YOUR KING")
                     self.highlight_check()
                     self.king_check = True
