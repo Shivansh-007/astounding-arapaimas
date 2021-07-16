@@ -93,9 +93,10 @@ class Game:
         self.selected_col = 0
         self.possible_moves = []
         self.flag = True
-        self.chat_box_width = 38
+        self.chat_box_width = self.w - int(self.w * 0.745) - 1
         self.chat_hist_height = 1
         self.full_chat_hist = ""
+        self.chat_box_x = int(self.w * 0.73)
         # self.term.number_of_colors = 256
         # self.handle_arrows()
 
@@ -342,18 +343,18 @@ class Game:
         formatted_text = ""
         for i, char in enumerate(text):
             if (i + 1) % self.chat_box_width == 0:
-                formatted_text += "\n" + self.term.move_x(int(self.w * 0.745)) + char
+                formatted_text += "\n" + self.term.move_x(self.chat_box_x + 1) + char
             else:
                 formatted_text += char
 
         self.chat_hist_height += 1
         self.full_chat_hist += (
-            formatted_text + "\n" + self.term.move_x(int(self.w * 0.745))
+            formatted_text + "\n" + self.term.move_x(self.chat_box_x + 1)
         )
         self.box(
             height=(1 + self.chat_hist_height),
             width=self.chat_box_width,
-            x_pos=int(self.w * 0.74),
+            x_pos=self.chat_box_x,
             y_pos=self.h - 6 - self.chat_hist_height,
             visibility_dull=True,
             text=self.full_chat_hist,
@@ -366,7 +367,7 @@ class Game:
         self.box(
             height=1,
             width=self.chat_box_width,
-            x_pos=int(self.w * 0.74),
+            x_pos=self.chat_box_x,
             y_pos=self.h - 4,
             visibility_dull=False,
         )
@@ -384,7 +385,7 @@ class Game:
                     self.box(
                         height=1,
                         width=self.chat_box_width,
-                        x_pos=int(self.w * 0.74),
+                        x_pos=self.chat_box_x,
                         y_pos=self.h - 4,
                         visibility_dull=False,
                         text=text,
@@ -394,7 +395,7 @@ class Game:
                     self.box(
                         height=1,
                         width=self.chat_box_width,
-                        x_pos=int(self.w * 0.74),
+                        x_pos=self.chat_box_x,
                         y_pos=self.h - 4,
                         visibility_dull=False,
                         text=text,
@@ -405,7 +406,7 @@ class Game:
                 self.box(
                     height=1,
                     width=self.chat_box_width,
-                    x_pos=int(self.w * 0.74),
+                    x_pos=self.chat_box_x,
                     y_pos=self.h - 4,
                     visibility_dull=True,
                 )
@@ -414,7 +415,7 @@ class Game:
                 self.box(
                     height=1,
                     width=self.chat_box_width,
-                    x_pos=int(self.w * 0.74),
+                    x_pos=self.chat_box_x,
                     y_pos=self.h - 4,
                     visibility_dull=True,
                 )
@@ -487,7 +488,7 @@ class Game:
         self.box(
             height=1,
             width=self.chat_box_width,
-            x_pos=int(self.w * 0.74),
+            x_pos=self.chat_box_x,
             y_pos=self.h - 4,
             visibility_dull=True,
         )
@@ -585,7 +586,7 @@ class Game:
         while True:
             print(
                 self.term.color_rgb(100, 100, 100)
-                + self.term.move_xy(int(self.w * 0.75), self.h - 2)
+                + self.term.move_xy(self.chat_box_x + 1, self.h - 2)
                 + "Press [TAB] to message your opponent"
             )
             with self.term.cbreak():
