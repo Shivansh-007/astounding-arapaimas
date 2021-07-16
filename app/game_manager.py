@@ -66,6 +66,8 @@ class Game:
 
     def __init__(self):
         self.term = Terminal()
+        self.w = self.term.width
+        self.h = self.term.height
         self.players = None
         self.game_id = None  # the game lobby id that the server will provide for online multiplayer
         self.server_ip = None
@@ -80,13 +82,21 @@ class Game:
         self.tile_height = 3
         self.offset_x = 0
         self.offset_y = 0
+        self.x_shift = int(self.w * 0.3)
+        self.y_shift = int(self.h * 0.2)
         self.x = 0
         self.y = 0
+        self.chat_enabled = False
         # self.my_color = 'white' # for future
         self.white_move = True  # this will change in multiplayer game
         self.selected_row = 0
         self.selected_col = 0
         self.possible_moves = []
+        self.flag = True
+        self.chat_box_width = 38
+        self.chat_hist_height = 1
+        self.full_chat_hist = ""
+        # self.term.number_of_colors = 256
         # self.handle_arrows()
 
     # TODO:: IS THIS NEEDED?
@@ -252,10 +262,170 @@ class Game:
         else:
             return "EXIT"
 
+    def show_prev_move(self, start: list, end: list, x_pos: int, y_pos: int) -> None:
+        """Prints the previous move of the player."""
+        print(
+            self.term.black_on_white
+            + self.term.move_xy(self.w // 13, int(self.h / 2.4))
+            + "╭"
+            + "─" * 20
+            + "╮"
+        )  # $$$$$$$$$$$$$$$$$$
+        print(self.term.move_x(self.w // 13) + "│ Your Previous move │")
+        print(self.term.move_x(self.w // 13) + "├" + "─" * 20 + "┤")  # 21
+        print(
+            self.term.move_x(self.w // 13)
+            + "│"
+            + " " * 3
+            + mapper[self.chess_board[y_pos][x_pos]][0]
+            + " "
+            + start
+            + " ==> "
+            + end
+            + " " * 6
+            + "│"
+        )
+        print(
+            self.term.move_x(self.w // 13) + "╰" + "─" * 20 + "╯" + self.term.normal
+        )  # 12
+
+    def box(
+        self,
+        height: int = 3,
+        width: int = 20,
+        x_pos: int = 0,
+        y_pos: int = 0,
+        visibility_dull: bool = True,
+        text: str = "",
+        no_checks: bool = False,
+        shift_y: int = 1,
+    ) -> None:
+        """Handles creation of tables and printing text in it."""
+        length = len(text)
+        color = self.term.color_rgb(100, 100, 100)
+        if not visibility_dull:
+            color = self.term.white
+        if not no_checks:
+            if length <= width:
+                content = text[:length]
+            else:
+                content = text[length - width : length]
+        else:
+            content = text
+        print(color + self.term.move_xy(x_pos, y_pos))
+        print(self.term.move_x(x_pos) + "╭" + "─" * width + "╮")
+        for _ in range(height):
+            print(self.term.move_x(x_pos) + "│" + " " * width + "│")
+        print(self.term.move_up)  # $$$$$$$$$$$$$$$$$$
+        if not no_checks:
+            print(
+                self.term.move_down(1)
+                + self.term.move_x(x_pos)
+                + "╰"
+                + "─" * width
+                + "╯"
+                + self.term.move_x(0)
+                + self.term.move_up
+            )
+        print(
+            self.term.move_x(x_pos + 1)
+            + self.term.move_up(shift_y)
+            + self.term.yellow
+            + content
+            + self.term.normal
+        )  # 12
+
+    def chatbox_history(self, text: str) -> None:
+        """Manages chat history to be displayed."""
+        if len(text) > self.chat_box_width:
+            self.chat_hist_height += (len(text)) // self.chat_box_width
+        formatted_text = ""
+        for i, char in enumerate(text):
+            if (i + 1) % self.chat_box_width == 0:
+                formatted_text += "\n" + self.term.move_x(int(self.w * 0.745)) + char
+            else:
+                formatted_text += char
+
+        self.chat_hist_height += 1
+        self.full_chat_hist += (
+            formatted_text + "\n" + self.term.move_x(int(self.w * 0.745))
+        )
+        self.box(
+            height=(1 + self.chat_hist_height),
+            width=self.chat_box_width,
+            x_pos=int(self.w * 0.74),
+            y_pos=self.h - 6 - self.chat_hist_height,
+            visibility_dull=True,
+            text=self.full_chat_hist,
+            no_checks=True,
+            shift_y=self.chat_hist_height,
+        )
+
+    def chatbox(self) -> None:
+        """Creates chat box for the players."""
+        self.box(
+            height=1,
+            width=self.chat_box_width,
+            x_pos=int(self.w * 0.74),
+            y_pos=self.h - 4,
+            visibility_dull=False,
+        )
+        with self.term.cbreak():
+            flag = ""
+            text = "ME:"
+            char = ""
+            while flag != "KEY_ENTER" and flag != "KEY_TAB":
+                if (
+                    char is not None
+                    and len(char.lower()) == 1
+                    and flag != "KEY_BACKSPACE"
+                ):
+                    text += char.lower()
+                    self.box(
+                        height=1,
+                        width=self.chat_box_width,
+                        x_pos=int(self.w * 0.74),
+                        y_pos=self.h - 4,
+                        visibility_dull=False,
+                        text=text,
+                    )
+                if flag == "KEY_BACKSPACE":
+                    text = text[: len(text) - 1]
+                    self.box(
+                        height=1,
+                        width=self.chat_box_width,
+                        x_pos=int(self.w * 0.74),
+                        y_pos=self.h - 4,
+                        visibility_dull=False,
+                        text=text,
+                    )
+                char = self.term.inkey()
+                flag = char.name
+            if flag == "KEY_ENTER":
+                self.box(
+                    height=1,
+                    width=self.chat_box_width,
+                    x_pos=int(self.w * 0.74),
+                    y_pos=self.h - 4,
+                    visibility_dull=True,
+                )
+                self.chatbox_history(text=text)  # Send the message
+            else:
+                self.box(
+                    height=1,
+                    width=self.chat_box_width,
+                    x_pos=int(self.w * 0.74),
+                    y_pos=self.h - 4,
+                    visibility_dull=True,
+                )
+        print(self.term.hide_cursor + self.term.move_up)
+
     def draw_tile(
         self,
         x: int = 0,
         y: int = 0,
+        x_offset: int = 0,
+        y_offset: int = 0,
         text: str = None,
         fg: str = "black",
         bg: str = "white",
@@ -264,9 +434,9 @@ class Game:
         style = getattr(self.term, f"{fg}_on_{bg}")
         for j in range(y, y + self.tile_height):
             for i in range(x, x + self.tile_width):
-                with self.term.location(i, j):
+                with self.term.location(i + x_offset, j + y_offset):
                     print(style(" "))
-        with self.term.location(x, y + (self.tile_height // 2)):
+        with self.term.location(x + x_offset, y + y_offset + (self.tile_height // 2)):
             print(style(str.center(text, self.tile_width)))
 
     def get_piece_and_color(self, row: int, col: int) -> tuple:
@@ -314,20 +484,28 @@ class Game:
     def show_game_screen(self) -> None:
         """Shows the chess board."""
         print(self.term.home + self.term.clear)
+        self.box(
+            height=1,
+            width=self.chat_box_width,
+            x_pos=int(self.w * 0.74),
+            y_pos=self.h - 4,
+            visibility_dull=True,
+        )
         with self.term.hidden_cursor():
             for i in range(len(self)):
                 # for every col we need to add number too!
                 num = len(self) - i
                 x = self.tile_width // 2
                 y = i * self.tile_height + self.tile_height // 2
-                with self.term.location(x, y):
+                with self.term.location(x + self.x_shift, y + self.y_shift):
                     print(num)
                 for j in range(len(self)):
                     self.update_block(i, j)
             # adding Alphabets for columns
             for i in range(len(self)):
                 with self.term.location(
-                    x * 2 - 1 + i * self.tile_width, len(self) * self.tile_height
+                    x * 2 - 1 + i * self.tile_width + self.x_shift,
+                    len(self) * self.tile_height + self.y_shift + 1,
                 ):
                     print(str.center(COL[i], len(self)))
             while True:
@@ -338,6 +516,13 @@ class Game:
                     self.chess.move_piece("".join((*start_move, *end_move)).lower())
                     self.fen = self.chess.give_board()
                     self.chess_board = self.fen_to_board(self.fen)
+                    self.show_prev_move(
+                        start="".join(start_move),
+                        end="".join(end_move),
+                        x_pos=COL.index(end_move[0].upper()),
+                        y_pos=8 - int(end_move[1]),
+                    )
+                    # 3333333333333333333333333
                 self.update_block(
                     len(self) - int(end_move[1]), COL.index(end_move[0].upper())
                 )
@@ -352,9 +537,13 @@ class Game:
             bg = self.theme.themes[self.colour_scheme]["selected_square"]
         elif [row, col] in self.possible_moves:
             bg = self.theme.themes[self.colour_scheme]["legal_squares"]
+        if self.flag:
+            self.flag = False
         self.draw_tile(
             self.tile_width + col * (self.tile_width + self.offset_x),
             row * (self.tile_height + self.offset_y),
+            self.x_shift,
+            self.y_shift,
             text=piece,
             fg=color,
             bg=bg,
@@ -394,8 +583,15 @@ class Game:
         """Manages the arrow movement on board."""
         start_move = end_move = False
         while True:
+            print(
+                self.term.color_rgb(100, 100, 100)
+                + self.term.move_xy(int(self.w * 0.75), self.h - 2)
+                + "Press [TAB] to message your opponent"
+            )
             with self.term.cbreak():
                 inp = self.term.inkey()
+            if inp.name == "KEY_TAB":
+                self.chatbox()
             input_key = repr(inp)
             if input_key == "KEY_DOWN":
                 if self.selected_row < 7:
