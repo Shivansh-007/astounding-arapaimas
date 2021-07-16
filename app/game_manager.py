@@ -90,7 +90,7 @@ class Game:
         self.chat_box_width = self.w - int(self.w * 0.745) - 1
         self.chat_hist_height = 1
         self.full_chat_hist = ""
-        self.chat_box_x = int(self.w * 0.73)
+        self.chat_box_x = int(self.w * 0.70)
         # self.term.number_of_colors = 256
         # self.handle_arrows()
         self.moves_played = 0
