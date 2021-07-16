@@ -1,3 +1,7 @@
+import json
+import os.path
+
+import appdirs
 from blessed import Terminal
 
 from app import ascii_art, constants
@@ -31,6 +35,35 @@ class Game:
         self.term = Terminal()
         self.curr_highlight = None
         self.theme = ColourScheme(self.term, theme="default")
+
+    def ask_or_get_token(self) -> str:
+        """
+        Ask the user/get token from cache.
+
+        If token is found in user's cache then read that else ask
+        the user for the token, validate it through the API and store it
+        in user's cache.
+        """
+        cache_path = f'{appdirs.user_cache_dir("stealth_chess")}/token.json'
+        if os.path.exists(cache_path):
+            # Read file token from file as cache exists
+            with open(cache_path, "r", encoding="utf-8") as file:
+                token = (json.load(file)).get("token")
+                if token:
+                    return token
+
+        # If cache file is not found
+        token = {"token": input("Enter your API token: ")}  # ask token
+
+        # Make the cache folder for storing the token
+        directory = os.path.dirname(cache_path)
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
+        # Write the token to cache file
+        with open(cache_path, "w+", encoding="utf-8") as file:
+            json.dump(token, file, ensure_ascii=False, indent=4)
+        return token["token"]
 
     def create_lobby(self) -> int:
         """Used to create a game lobby on the server or locally."""
