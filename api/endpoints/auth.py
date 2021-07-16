@@ -3,6 +3,7 @@ import traceback
 
 from fastapi import APIRouter, Cookie, HTTPException, Request, Response
 from httpx import AsyncClient
+from pydantic import BaseModel
 from starlette.responses import RedirectResponse
 
 from api.constants import Discord, Server
@@ -10,6 +11,12 @@ from api.utils import auth
 
 log = logging.getLogger(__name__)
 router = APIRouter(include_in_schema=False)
+
+
+class Token(BaseModel):
+    """A user's personal token."""
+
+    token: str
 
 
 @router.get("/authorize")
@@ -94,3 +101,10 @@ async def auth_callback(request: Request) -> Response:
         path="/show_token",
     )
     return redirect
+
+
+@router.put("/validate_token")
+async def validate_user_token(_: Request, token: Token) -> dict:
+    """Validate user's token and return if it is valid or not."""
+    user_id = await auth.JWTBearer().get_user_by_plain_token(token.token)
+    return {"message": user_id}
