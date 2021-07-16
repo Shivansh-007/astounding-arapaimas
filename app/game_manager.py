@@ -260,30 +260,80 @@ class Game:
         else:
             return "EXIT"
 
-    def show_prev_move(self, start: list, end: list, x_pos: int, y_pos: int) -> None:
+    def chess_status_display(
+        self,
+        start: str = "",
+        end: str = "",
+        x_pos: int = 0,
+        y_pos: int = 0,
+        y_pos_box: int = 0,
+        box_width: int = 20,
+        title: str = "Your Previous move",
+        content: str = "",
+        is_last_move: bool = True,
+    ) -> None:
+        """Function to display previous move plus additional box creator."""
+        if is_last_move:
+            y_pos_box = int(self.h * 0.3)
+        if len(title) > box_width:
+            box_width = len(title) + 2
         """Prints the previous move of the player."""
         print(
             self.term.black_on_white
-            + self.term.move_xy(self.w // 13, int(self.h / 2.4))
+            + self.term.move_xy(self.w // 13, y_pos_box)
             + "╭"
-            + "─" * 20
+            + "─" * box_width
             + "╮"
         )
-        print(self.term.move_x(self.w // 13) + "│ Your Previous move │")
-        print(self.term.move_x(self.w // 13) + "├" + "─" * 20 + "┤")  # 21
+        space_right = (box_width - len(title)) // 2
+        space_left = box_width - len(title) - space_right
         print(
             self.term.move_x(self.w // 13)
             + "│"
-            + " " * 3
-            + mapper[self.chess_board[y_pos][x_pos]][0]
-            + " "
-            + start
-            + " ==> "
-            + end
-            + " " * 6
+            + " " * space_left
+            + title
+            + " " * space_right
             + "│"
         )
-        print(self.term.move_x(self.w // 13) + "╰" + "─" * 20 + "╯" + self.term.normal)
+        print(self.term.move_x(self.w // 13) + "├" + "─" * box_width + "┤")  # 21
+        # formatted_content = ""
+        # for i,char in enumerate(content):
+        #     if (i+1) % box_width == 0:
+        #         formatted_content += '\n'+self.term.move_x(self.w // 13)+char
+        #     else:
+        #         formatted_content += char
+        if is_last_move:
+            print(
+                self.term.move_x(self.w // 13)
+                + "│"
+                + " " * 3
+                + mapper[self.chess_board[y_pos][x_pos]][0]
+                + " "
+                + start
+                + " ==> "
+                + end
+                + " " * 6
+                + "│"
+            )
+        else:
+            space_right = (box_width - len(content)) // 2
+            space_left = box_width - len(content) - space_right - 1
+            print(
+                self.term.move_x(self.w // 13)
+                + "│"
+                + " " * space_left
+                + " "
+                + content
+                + " " * space_right
+                + "│"
+            )
+        print(
+            self.term.move_x(self.w // 13)
+            + "╰"
+            + "─" * box_width
+            + "╯"
+            + self.term.normal
+        )
 
     def box(
         self,
@@ -518,7 +568,7 @@ class Game:
                     self.chess.move_piece(move)
                     self.fen = self.chess.give_board()
                     self.chess_board = self.fen_to_board(self.fen)
-                    self.show_prev_move(
+                    self.chess_status_display(
                         start="".join(start_move),
                         end="".join(end_move),
                         x_pos=COL.index(end_move[0].upper()),
@@ -728,3 +778,12 @@ class Game:
             elif menu_choice == "EXIT":
                 # exit the game peacefully
                 print(self.term.clear + self.term.exit_fullscreen + self.term.clear)
+
+
+# self.chess_status_display(
+#     y_pos_box= int(self.h * 0.4),
+#     title="What bites?",
+#     content="sdafsfsdfsdf: Python",  ---->|usage of function
+#     box_width= 30,                        |chess_status_display(previously show_previous_move)
+#     is_last_move=False
+# )
