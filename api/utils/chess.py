@@ -1,6 +1,5 @@
 import logging
 
-import Chessnut
 from Chessnut import Game
 
 from api.crud import game

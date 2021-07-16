@@ -5,7 +5,6 @@ from typing import Optional
 
 import Chessnut.game
 from fastapi import APIRouter, Depends, HTTPException, Request, WebSocket
-from sqlalchemy.orm import Session
 from starlette.websockets import WebSocketDisconnect
 
 from api import schemas
