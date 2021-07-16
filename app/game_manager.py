@@ -808,7 +808,7 @@ class Game:
 # self.chess_status_display(
 #     y_pos_box= int(self.h * 0.4),
 #     title="What bites?",
-#     content="sdafsfsdfsdf: Python",  ---->|usage of function
+#     content="What bites: Python",  ---->|usage of function
 #     box_width= 30,                        |chess_status_display(previously show_previous_move)
 #     is_last_move=False
 # )
