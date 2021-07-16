@@ -2,6 +2,7 @@ import json
 import os.path
 
 import appdirs
+import httpx
 from blessed import Terminal
 
 from app import ascii_art, constants
@@ -53,7 +54,16 @@ class Game:
                     return token
 
         # If cache file is not found
-        token = {"token": input("Enter your API token: ")}  # ask token
+        token_ok = False
+        token = input("Enter your API token")
+        while not token_ok:
+            r = httpx.put("http://127.0.0.1:8000/validate_token", json={"token": token})
+            if r.status_code != 200:
+                token = input("Invalid token, enter the correct one: ")
+            else:
+                token_ok = True
+
+        token = {"token": token}  # ask token
 
         # Make the cache folder for storing the token
         directory = os.path.dirname(cache_path)
