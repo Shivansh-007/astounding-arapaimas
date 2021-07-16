@@ -265,7 +265,7 @@ class Game:
             + "╭"
             + "─" * 20
             + "╮"
-        )  # $$$$$$$$$$$$$$$$$$
+        )
         print(self.term.move_x(self.w // 13) + "│ Your Previous move │")
         print(self.term.move_x(self.w // 13) + "├" + "─" * 20 + "┤")  # 21
         print(
@@ -282,7 +282,7 @@ class Game:
         )
         print(
             self.term.move_x(self.w // 13) + "╰" + "─" * 20 + "╯" + self.term.normal
-        )  # 12
+        )
 
     def box(
         self,
@@ -300,18 +300,15 @@ class Game:
         color = self.term.color_rgb(100, 100, 100)
         if not visibility_dull:
             color = self.term.white
-        if not no_checks:
-            if length <= width:
-                content = text[:length]
-            else:
-                content = text[length - width : length]
+        if not no_checks and length > width:
+            content = text[length - width : length]
         else:
             content = text
         print(color + self.term.move_xy(x_pos, y_pos))
         print(self.term.move_x(x_pos) + "╭" + "─" * width + "╮")
         for _ in range(height):
             print(self.term.move_x(x_pos) + "│" + " " * width + "│")
-        print(self.term.move_up)  # $$$$$$$$$$$$$$$$$$
+        print(self.term.move_up)
         if not no_checks:
             print(
                 self.term.move_down(1)
@@ -328,7 +325,7 @@ class Game:
             + self.term.yellow
             + content
             + self.term.normal
-        )  # 12
+        )
 
     def chatbox_history(self, text: str) -> None:
         """Manages chat history to be displayed."""
