@@ -2,7 +2,7 @@ import logging
 
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
@@ -36,9 +36,7 @@ async def my_exception_handler(
             context={"request": request},
             status_code=exception.status_code,
         )
-    return JSONResponse(
-        status_code=exception.status_code, content={"message": exception.detail}
-    )
+    return PlainTextResponse(str(exception.detail), status_code=exception.status_code)
 
 
 @app.on_event("startup")
