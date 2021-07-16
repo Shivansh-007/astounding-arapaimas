@@ -1,0 +1,13 @@
+version: "3.7"
+
+services:
+  elections:
+    image: ghcr.io/p0lygun/astounding-arapaimas:main
+    volumes:
+      - ./log:/app/log
+      - .:/app:ro
+    tty: true
+    env_file:
+      - .env
+    ports:
+      - "127.0.0.1:8000:8000"
