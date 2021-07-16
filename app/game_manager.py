@@ -89,7 +89,7 @@ class Game:
         self.chat_hist_height = 1
         self.full_chat_hist = ""
         self.moves_played = 0
-        self.moves_limit = 100  # TODO:: MAKE THIS DYNAMIC
+        self.moves_limit = 4  # TODO:: MAKE THIS DYNAMIC
         self.visible_layers = 8
         self.hidden_layer = ones((self.visible_layers, self.visible_layers))
 
@@ -512,9 +512,7 @@ class Game:
                 ):
                     print(str.center(COL[i], len(self)))
             while True:
-                # available_moves = chessboard.all_available_moves()
                 start_move, end_move = self.handle_arrows()
-                # print(start_move, end_move)
                 with self.term.location(0, self.term.height - 10):
                     self.chess.move_piece("".join((*start_move, *end_move)).lower())
                     self.fen = self.chess.give_board()
@@ -533,7 +531,6 @@ class Game:
                     len(self) - int(start_move[1]), COL.index(start_move[0].upper())
                 )
                 self.moves_played += 1
-                # print(CHESS_STATUS)
                 if (
                     self.get_game_status() == CHESS_STATUS["CHECKMATE"]
                     or self.moves_played == 3
