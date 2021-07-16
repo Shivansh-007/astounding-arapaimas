@@ -3,21 +3,22 @@ from copy import deepcopy
 from blessed import Terminal
 from numpy import ones
 
-from app import ascii_art, constants
+from app import ascii_art
 from app.chess import ChessBoard
-from app.constants import CHESS_STATUS
+from app.constants import (
+    BLACK_PIECES,
+    CHESS_STATUS,
+    COL,
+    GAME_WELCOME_BOTTOM,
+    GAME_WELCOME_TOP,
+    INITIAL_FEN,
+    MENU_MAPPING,
+    PIECES,
+    POSSIBLE_CASTLING_MOVES,
+    ROW,
+    WHITE_PIECES,
+)
 from app.ui.Colour import ColourScheme
-
-PIECES = "".join(chr(9812 + x) for x in range(12))
-print(PIECES)
-COL = ("A", "B", "C", "D", "E", "F", "G", "H")
-ROW = tuple(map(str, range(1, 9)))
-
-INITIAL_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-
-BLACK_PIECES = ("r", "n", "b", "q", "k", "p")
-
-WHITE_PIECES = ("R", "N", "B", "Q", "K", "P")
 
 mapper = {
     "em": ("", "white"),
@@ -85,9 +86,12 @@ class Game:
         self.selected_col = 0
         self.possible_moves = []
         self.flag = True
-        self.chat_box_width = 38
+        self.chat_box_width = self.w - int(self.w * 0.745) - 1
         self.chat_hist_height = 1
         self.full_chat_hist = ""
+        self.chat_box_x = int(self.w * 0.73)
+        # self.term.number_of_colors = 256
+        # self.handle_arrows()
         self.moves_played = 0
         self.moves_limit = 100  # TODO:: MAKE THIS DYNAMIC
         self.visible_layers = 8
@@ -109,12 +113,11 @@ class Game:
             padding = (
                 self.term.width
                 - sum(
-                    max(len(p) for p in piece.split("\n"))
-                    for piece in constants.GAME_WELCOME_TOP
+                    max(len(p) for p in piece.split("\n")) for piece in GAME_WELCOME_TOP
                 )
             ) // 2
             position = 0
-            for piece in constants.GAME_WELCOME_TOP:
+            for piece in GAME_WELCOME_TOP:
                 for i, val in enumerate(piece.split("\n")):
                     with self.term.location(
                         padding + position,
@@ -125,7 +128,7 @@ class Game:
 
             # draw top chess pieces
             position = 0
-            for piece in constants.GAME_WELCOME_BOTTOM:
+            for piece in GAME_WELCOME_BOTTOM:
                 for i, val in enumerate(piece.split("\n")):
                     with self.term.location(padding + position, 1 + i):
                         print(self.theme.ws_top(val))
@@ -158,9 +161,7 @@ class Game:
         """Prints the game-menu screen."""
 
         def print_options() -> None:
-            for i, option in enumerate(
-                constants.MENU_MAPPING.items()
-            ):  # updates the options
+            for i, option in enumerate(MENU_MAPPING.items()):  # updates the options
                 title, (_, style, highlight) = option
                 if i == self.curr_highlight:
                     print(
@@ -186,7 +187,7 @@ class Game:
                     self.term.move_down(3)
                     + self.theme.gm_option_message
                     + self.term.center(
-                        list(constants.MENU_MAPPING.values())[self.curr_highlight][0]
+                        list(MENU_MAPPING.values())[self.curr_highlight][0]
                     )
                     + self.term.move_x(0)
                     + "\n\n"
@@ -217,12 +218,12 @@ class Game:
         spacing = int(w * 0.05)
         padding = (
             w
-            - sum(len(option) for option in constants.MENU_MAPPING.keys())
-            - spacing * len(constants.MENU_MAPPING.keys())
+            - sum(len(option) for option in MENU_MAPPING.keys())
+            - spacing * len(MENU_MAPPING.keys())
         ) // 2
         position = padding
         term_positions = []
-        for option in constants.MENU_MAPPING:
+        for option in MENU_MAPPING:
             term_positions.append(position)
             position += len(option) + spacing
 
@@ -264,7 +265,7 @@ class Game:
             + "╭"
             + "─" * 20
             + "╮"
-        )  # $$$$$$$$$$$$$$$$$$
+        )
         print(self.term.move_x(self.w // 13) + "│ Your Previous move │")
         print(self.term.move_x(self.w // 13) + "├" + "─" * 20 + "┤")  # 21
         print(
@@ -279,9 +280,7 @@ class Game:
             + " " * 6
             + "│"
         )
-        print(
-            self.term.move_x(self.w // 13) + "╰" + "─" * 20 + "╯" + self.term.normal
-        )  # 12
+        print(self.term.move_x(self.w // 13) + "╰" + "─" * 20 + "╯" + self.term.normal)
 
     def box(
         self,
@@ -299,18 +298,15 @@ class Game:
         color = self.term.color_rgb(100, 100, 100)
         if not visibility_dull:
             color = self.term.white
-        if not no_checks:
-            if length <= width:
-                content = text[:length]
-            else:
-                content = text[length - width : length]
+        if not no_checks and length > width:
+            content = text[length - width : length]
         else:
             content = text
         print(color + self.term.move_xy(x_pos, y_pos))
         print(self.term.move_x(x_pos) + "╭" + "─" * width + "╮")
         for _ in range(height):
             print(self.term.move_x(x_pos) + "│" + " " * width + "│")
-        print(self.term.move_up)  # $$$$$$$$$$$$$$$$$$
+        print(self.term.move_up)
         if not no_checks:
             print(
                 self.term.move_down(1)
@@ -327,7 +323,7 @@ class Game:
             + self.term.yellow
             + content
             + self.term.normal
-        )  # 12
+        )
 
     def chatbox_history(self, text: str) -> None:
         """Manages chat history to be displayed."""
@@ -336,18 +332,18 @@ class Game:
         formatted_text = ""
         for i, char in enumerate(text):
             if (i + 1) % self.chat_box_width == 0:
-                formatted_text += "\n" + self.term.move_x(int(self.w * 0.745)) + char
+                formatted_text += "\n" + self.term.move_x(self.chat_box_x + 1) + char
             else:
                 formatted_text += char
 
         self.chat_hist_height += 1
         self.full_chat_hist += (
-            formatted_text + "\n" + self.term.move_x(int(self.w * 0.745))
+            formatted_text + "\n" + self.term.move_x(self.chat_box_x + 1)
         )
         self.box(
             height=(1 + self.chat_hist_height),
             width=self.chat_box_width,
-            x_pos=int(self.w * 0.74),
+            x_pos=self.chat_box_x,
             y_pos=self.h - 6 - self.chat_hist_height,
             visibility_dull=True,
             text=self.full_chat_hist,
@@ -360,7 +356,7 @@ class Game:
         self.box(
             height=1,
             width=self.chat_box_width,
-            x_pos=int(self.w * 0.74),
+            x_pos=self.chat_box_x,
             y_pos=self.h - 4,
             visibility_dull=False,
         )
@@ -378,7 +374,7 @@ class Game:
                     self.box(
                         height=1,
                         width=self.chat_box_width,
-                        x_pos=int(self.w * 0.74),
+                        x_pos=self.chat_box_x,
                         y_pos=self.h - 4,
                         visibility_dull=False,
                         text=text,
@@ -388,7 +384,7 @@ class Game:
                     self.box(
                         height=1,
                         width=self.chat_box_width,
-                        x_pos=int(self.w * 0.74),
+                        x_pos=self.chat_box_x,
                         y_pos=self.h - 4,
                         visibility_dull=False,
                         text=text,
@@ -399,7 +395,7 @@ class Game:
                 self.box(
                     height=1,
                     width=self.chat_box_width,
-                    x_pos=int(self.w * 0.74),
+                    x_pos=self.chat_box_x,
                     y_pos=self.h - 4,
                     visibility_dull=True,
                 )
@@ -408,7 +404,7 @@ class Game:
                 self.box(
                     height=1,
                     width=self.chat_box_width,
-                    x_pos=int(self.w * 0.74),
+                    x_pos=self.chat_box_x,
                     y_pos=self.h - 4,
                     visibility_dull=True,
                 )
@@ -508,14 +504,14 @@ class Game:
         self.box(
             height=1,
             width=self.chat_box_width,
-            x_pos=int(self.w * 0.74),
+            x_pos=self.chat_box_x,
             y_pos=self.h - 4,
             visibility_dull=True,
         )
 
         with self.term.hidden_cursor():
             for i in range(len(self)):
-                # for every col we need to add number too!
+                # Adding Numbers to indicate rows
                 num = len(self) - i
                 x = self.tile_width // 2
                 y = i * self.tile_height + self.tile_height // 2
@@ -524,7 +520,7 @@ class Game:
 
                 for j in range(len(self)):
                     self.update_block(i, j)
-            # adding Alphabets for columns
+            # Adding Numbers to indicate columns
             for i in range(len(self)):
                 with self.term.location(
                     x * 2 - 1 + i * self.tile_width + self.x_shift,
@@ -535,9 +531,10 @@ class Game:
                 # self.print_message(' '*10)
                 start_move, end_move = self.handle_arrows()
                 with self.term.location(0, self.term.height - 10):
-                    print("".join((*start_move, *end_move)).lower())
-                    self.chess.move_piece("".join((*start_move, *end_move)).lower())
+                    move = "".join((*start_move, *end_move)).lower()
+                    self.chess.move_piece(move)
                     self.king_check = False
+
                     self.fen = self.chess.give_board()
                     self.chess_board = self.fen_to_board(self.fen)
                     self.show_prev_move(
@@ -546,7 +543,9 @@ class Game:
                         x_pos=COL.index(end_move[0].upper()),
                         y_pos=8 - int(end_move[1]),
                     )
-                    # 3333333333333333333333333
+                if move in POSSIBLE_CASTLING_MOVES:
+                    self.update_board()
+                    continue
                 self.update_block(
                     len(self) - int(end_move[1]), COL.index(end_move[0].upper())
                 )
@@ -573,9 +572,7 @@ class Game:
                     self.hidden_layer[-invisible_layers:, :] = 0
                     self.hidden_layer[:, 0:invisible_layers] = 0
                     self.hidden_layer[:, -invisible_layers:] = 0
-                    for i in range(8):
-                        for j in range(8):
-                            self.update_block(i, j)
+                    self.update_board()
 
     def update_block(self, row: int, col: int) -> None:
         """Updates block on row and col(we must first mutate actual list first)."""
@@ -602,6 +599,12 @@ class Game:
             fg=color,
             bg=bg,
         )
+
+    def update_board(self) -> None:
+        """Updates whole board when needed. Simplest Solution but expensive."""
+        for i in range(8):
+            for j in range(8):
+                self.update_block(i, j)
 
     @staticmethod
     def get_row_col(row: int, col: str) -> tuple:
@@ -644,7 +647,7 @@ class Game:
         while True:
             print(
                 self.term.color_rgb(100, 100, 100)
-                + self.term.move_xy(int(self.w * 0.75), self.h - 2)
+                + self.term.move_xy(self.chat_box_x + 1, self.h - 2)
                 + "Press [TAB] to message your opponent"
             )
             with self.term.cbreak():
