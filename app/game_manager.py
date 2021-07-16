@@ -12,7 +12,6 @@ from app.chess import ChessBoard
 from app.ui.Colour import ColourScheme
 
 PIECES = "".join(chr(9812 + x) for x in range(12))
-print(PIECES)
 COL = ("A", "B", "C", "D", "E", "F", "G", "H")
 ROW = tuple(map(str, range(1, 9)))
 
@@ -29,7 +28,6 @@ initial_game = [
 ]
 
 BLACK_PIECES = ("r", "n", "b", "q", "k", "p")
-
 WHITE_PIECES = ("R", "N", "B", "Q", "K", "P")
 
 mapper = {
@@ -70,27 +68,39 @@ class Game:
 
     def __init__(self):
         self.term = Terminal()
+
         self.players = None
         self.game_id = None  # the game lobby id that the server will provide for online multiplayer
         self.server_ip = None
+
         self.colour_scheme = "default"
         self.theme = ColourScheme(self.term, theme=self.colour_scheme)
+
         self.chess = ChessBoard(INITIAL_FEN)
         self.chess_board = self.fen_to_board(self.chess.give_board())
         self.fen = INITIAL_FEN
+
+        # Chess tile dimensions
         self.tile_width = 6
         self.tile_height = 3
+
+        # Chess tile offset coors, used for updating the row/col for drawing tile
         self.offset_x = 0
         self.offset_y = 0
+
         self.x = 0
         self.y = 0
+
         # self.my_color = 'white' # for future
         self.white_move = True  # this will change in multiplayer game
+
         self.selected_row = 0
         self.selected_col = 0
         self.possible_moves = []
+
         self.moves_played = 0
         self.moves_limit = 4  # TODO:: MAKE THIS DYNAMIC
+
         self.visible_layers = 8
         self.hidden_layer = ones((self.visible_layers, self.visible_layers))
 
@@ -140,9 +150,14 @@ class Game:
         pass
 
     def show_welcome_screen(self) -> str:
-        """Prints startup screen and return pressed key."""
+        """
+        Prints startup screen and return pressed key.
+
+        Draws the ASCII chess pieces on the top/bottom of the terminal.
+        """
         with self.term.cbreak():
             print(self.term.home + self.theme.background + self.term.clear)
+
             # draw bottom chess pieces
             padding = (
                 self.term.width
@@ -189,11 +204,18 @@ class Game:
                     5, self.term.height - len(ascii_art.THINK.split("\n")) + i
                 ):
                     print(self.theme.ws_think(val))
+
             keypress = self.term.inkey()
             return keypress
 
     def show_game_menu(self) -> str:
-        """Prints the game-menu screen."""
+        """
+        Main game menu.
+
+        This is the main game menu showing all the four possible options i.e.
+        Create Game, Join Game, settings and exit. Each have a description which
+        can be rendered on pressing `KEY_TAB`.
+        """
 
         def print_options() -> None:
             for i, option in enumerate(
@@ -277,12 +299,13 @@ class Game:
                 print(self.term.center(component))
             print(self.term.move_down(3))  # Sets the cursor to the options position
             print_options()
-            while (
-                pressed := self.term.inkey().name
-            ) != "KEY_ENTER":  # Loops till the user chooses an option
+
+            # Loop till the user chooses an option or presses tab to show the description
+            while (pressed := self.term.inkey().name) != "KEY_ENTER":
                 if pressed == "KEY_TAB":
                     select_option()
                     print_options()
+
         print(self.term.home + self.term.clear)  # Resets the terminal
 
         if not self.curr_highlight:
@@ -302,17 +325,19 @@ class Game:
         fg: str = "black",
         bg: str = "white",
     ) -> None:
-        """Draws one tile and text inside of it."""
+        """Draws a single chess tile and prints the `text` in the middle of it."""
         style = getattr(self.term, f"{fg}_on_{bg}")
         for j in range(y, y + self.tile_height):
             for i in range(x, x + self.tile_width):
                 with self.term.location(i, j):
                     print(style(" "))
+
+        # print the `text` at center of the chess tile
         with self.term.location(x, y + (self.tile_height // 2)):
             print(style(str.center(text, self.tile_width)))
 
     def get_piece_meta(self, row: int, col: int) -> tuple:
-        """Returns color and piece info of the cell."""
+        """Get colour and piece information of the cell."""
         if (row + col) % 2 == 0:
             bg = self.theme.themes[self.colour_scheme]["white_squares"]
         else:
@@ -323,7 +348,7 @@ class Game:
 
     @staticmethod
     def fen_to_board(fen: str) -> list:
-        """Return the chess array representation of FEN."""
+        """Convert the chess array to a FEN representation of it."""
         board = []
         fen_parts = fen.split(" ")
         board_str = fen_parts[0]
@@ -333,6 +358,8 @@ class Game:
             else:
                 row = []
                 for j in i:
+                    # numeric is when the chess tile is empty
+                    # `em` points to empty chess tile
                     if j.isnumeric():
                         row = row + ["em"] * int(j)
                     else:
@@ -343,6 +370,7 @@ class Game:
     def show_game_screen(self) -> None:
         """Shows the chess board."""
         print(self.term.home + self.term.clear + self.theme.background)
+
         with self.term.hidden_cursor():
             for i in range(len(self)):
                 # for every col we need to add number too!
@@ -353,20 +381,23 @@ class Game:
                     print(num)
                 for j in range(len(self)):
                     self.update_block(i, j)
+
             # adding Alphabets for columns
             for i in range(len(self)):
                 with self.term.location(
                     x * 2 - 1 + i * self.tile_width, len(self) * self.tile_height
                 ):
                     print(str.center(COL[i], len(self)))
+
             while True:
                 # available_moves = chessboard.all_available_moves()
                 start_move, end_move = self.handle_arrows()
-                # print(start_move, end_move)
+
                 with self.term.location(0, self.term.height - 10):
                     self.chess.move_piece("".join((*start_move, *end_move)).lower())
                     self.fen = self.chess.give_board()
                     self.chess_board = self.fen_to_board(self.fen)
+
                 self.update_block(
                     len(self) - int(end_move[1]), COL.index(end_move[0].upper())
                 )
@@ -374,6 +405,7 @@ class Game:
                     len(self) - int(start_move[1]), COL.index(start_move[0].upper())
                 )
                 self.moves_played += 1
+
                 if (
                     self.moves_played % self.moves_limit == 0
                     and self.visible_layers > 2
@@ -395,12 +427,15 @@ class Game:
             bg = self.theme.themes[self.colour_scheme]["selected_square"]
         elif [row, col] in self.possible_moves:
             bg = self.theme.themes[self.colour_scheme]["legal_squares"]
+
         make_invisible = (
             self.hidden_layer[row][col] == 0
             and not self.chess_board[row][col] in WHITE_PIECES
         )
+
         if make_invisible:
             piece = " "
+
         self.draw_tile(
             self.tile_width + col * (self.tile_width + self.offset_x),
             row * (self.tile_height + self.offset_y),
@@ -411,11 +446,11 @@ class Game:
 
     @staticmethod
     def get_row_col(row: int, col: str) -> tuple:
-        """Returns row and col index."""
+        """Get the row and col index."""
         return (8 - int(row), COL.index(col.upper()))
 
     def get_possible_move(self, piece: str) -> list:
-        """Gives possible moves for specific piece."""
+        """Gives all possible moves for the given piece."""
         moves = self.chess.all_available_moves()
         piece = piece.lower()
         return [i for i in moves if piece in i]
@@ -429,52 +464,64 @@ class Game:
         """Take a piece and highlights all possible moves."""
         old_moves = deepcopy(self.possible_moves)
         self.possible_moves = []
+
         # removes old moves
         for i in old_moves:
             self.update_block(i[0], i[1])
         if not move:
             return
+
         # highlights the possible moves.
         piece = self.chess_board[self.selected_row][self.selected_col]
         if piece == "em":
+            # If there are no possible moves for the piece
             return
+
         for i in self.get_possible_move("".join(move)):
             x = len(self) - int(i[3])
             y = COL.index(i[2].upper())
             self.possible_moves.append([x, y])
             self.update_block(x, y)
+
         with self.term.location(0, self.term.height - 5):
             print(self.possible_moves)
 
     def handle_arrows(self) -> tuple:
         """Manages the arrow movement on board."""
         start_move = end_move = False
+
         while True:
             with self.term.cbreak():
                 inp = self.term.inkey()
             input_key = repr(inp)
+
             if input_key == "KEY_DOWN":
                 if self.selected_row < 7:
                     self.selected_row += 1
                     self.update_block(self.selected_row - 1, self.selected_col)
                     self.update_block(self.selected_row, self.selected_col)
+
             elif input_key == "KEY_UP":
                 if self.selected_row > 0:
                     self.selected_row -= 1
                     self.update_block(self.selected_row + 1, self.selected_col)
                     self.update_block(self.selected_row, self.selected_col)
+
             elif input_key == "KEY_LEFT":
                 if self.selected_col > 0:
                     self.selected_col -= 1
                     self.update_block(self.selected_row, self.selected_col + 1)
                     self.update_block(self.selected_row, self.selected_col)
+
             elif input_key == "KEY_RIGHT":
                 if self.selected_col < 7:
                     self.selected_col += 1
                     self.update_block(self.selected_row, self.selected_col - 1)
                     self.update_block(self.selected_row, self.selected_col)
+
             elif input_key == "KEY_ENTER":
                 move = self.chess_board[self.selected_row][self.selected_col]
+
                 if not start_move:
                     # if clicked empty block
                     if move == "em":
@@ -491,6 +538,7 @@ class Game:
                         ROW[len(self) - self.selected_row - 1],
                     )
                     self.highlight_moves(start_move)
+
                 else:
                     if [self.selected_row, self.selected_col] in self.possible_moves:
                         end_move = (
