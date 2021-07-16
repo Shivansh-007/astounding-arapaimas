@@ -1,11 +1,11 @@
 from copy import deepcopy
 
 from blessed import Terminal
+from numpy import ones
 
 from app import ascii_art, constants
 from app.chess import ChessBoard
 from app.ui.Colour import ColourScheme
-
 
 PIECES = "".join(chr(9812 + x) for x in range(12))
 print(PIECES)
@@ -71,9 +71,7 @@ class Game:
         self.server_ip = None
         self.colour_scheme = "default"
         self.theme = ColourScheme(self.term, theme=self.colour_scheme)
-        # self.chess_board = deepcopy(initial_game)
         self.chess = ChessBoard(INITIAL_FEN)
-        # print(ChessBoard(INITIAL_FEN))
         self.chess_board = self.fen_to_board(self.chess.give_board())
         self.fen = INITIAL_FEN
         self.tile_width = 6
@@ -87,9 +85,11 @@ class Game:
         self.selected_row = 0
         self.selected_col = 0
         self.possible_moves = []
-        # self.handle_arrows()
+        self.moves_played = 0
+        self.moves_limit = 4  # TODO:: MAKE THIS DYNAMIC
+        self.visible_layers = 8
+        self.hidden_layer = ones((self.visible_layers, self.visible_layers))
 
-    # TODO:: IS THIS NEEDED?
     def __len__(self) -> int:
         return 8
 
@@ -269,13 +269,14 @@ class Game:
         with self.term.location(x, y + (self.tile_height // 2)):
             print(style(str.center(text, self.tile_width)))
 
-    def get_piece_and_color(self, row: int, col: int) -> tuple:
+    def get_piece_meta(self, row: int, col: int) -> tuple:
         """Returns color and piece info of the cell."""
         if (row + col) % 2 == 0:
             bg = self.theme.themes[self.colour_scheme]["white_squares"]
         else:
             bg = self.theme.themes[self.colour_scheme]["black_squares"]
-        piece, color = mapper[self.chess_board[row][col]]
+        piece_value = self.chess_board[row][col]
+        piece, color = mapper[piece_value]
         return (piece, color, bg)
 
     @staticmethod
@@ -330,14 +331,34 @@ class Game:
                 self.update_block(
                     len(self) - int(start_move[1]), COL.index(start_move[0].upper())
                 )
+                self.moves_played += 1
+                if (
+                    self.moves_played % self.moves_limit == 0
+                    and self.visible_layers > 2
+                ):
+                    self.visible_layers -= 2
+                    invisible_layers = (8 - self.visible_layers) // 2
+                    self.hidden_layer[0:invisible_layers, :] = 0
+                    self.hidden_layer[-invisible_layers:, :] = 0
+                    self.hidden_layer[:, 0:invisible_layers] = 0
+                    self.hidden_layer[:, -invisible_layers:] = 0
+                    for i in range(8):
+                        for j in range(8):
+                            self.update_block(i, j)
 
     def update_block(self, row: int, col: int) -> None:
         """Updates block on row and col(we must first mutate actual list first)."""
-        piece, color, bg = self.get_piece_and_color(row, col)
+        piece, color, bg = self.get_piece_meta(row, col)
         if self.selected_row == row and self.selected_col == col:
             bg = self.theme.themes[self.colour_scheme]["selected_square"]
         elif [row, col] in self.possible_moves:
             bg = self.theme.themes[self.colour_scheme]["legal_squares"]
+        make_invisible = (
+            self.hidden_layer[row][col] == 0
+            and not self.chess_board[row][col] in WHITE_PIECES
+        )
+        if make_invisible:
+            piece = " "
         self.draw_tile(
             self.tile_width + col * (self.tile_width + self.offset_x),
             row * (self.tile_height + self.offset_y),
