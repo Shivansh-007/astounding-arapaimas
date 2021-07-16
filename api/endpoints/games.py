@@ -12,7 +12,7 @@ from api import schemas
 from api.crud import game
 from api.endpoints import get_db
 from api.utils import auth
-from app.chess import ChessBoard
+from api.utils.chess import ChessBoard
 
 log = logging.getLogger(__name__)
 router = APIRouter(tags=["Game Endpoints"], dependencies=[Depends(auth.JWTBearer())])
@@ -74,23 +74,19 @@ class ChessNotifier:
         await self.generator.asend(message_body)
 
     async def connect(
-        self,
-        websocket: WebSocket,
-        room_name: str,
-        user_id: int,
-        db: Optional[Session] = next(get_db()),
+        self, websocket: WebSocket, room_name: str, user_id: int
     ) -> Optional[str]:
         """Connet a websocket connection and register/update it in the DB."""
         # Player 2 returns a string in case of invalid game ID (game doesn't exist)
         # or if the player 2 is already assigned and game has began!
-        print(int(room_name))
+        db = next(get_db())
         game_obj = game.get_by_game_id(db, game_id=int(room_name))
 
         if not game_obj:
             return "Invalid Game ID, make a game with /game/new and then connect here."
         if len(self.connections[room_name]) == 1:  # one user in room
             player_count = game.get_player_count(
-                db, game_id=room_name
+                db, game_id=int(room_name)
             )  # get how many in db
             if player_count == 1:  # only one in db
                 if game.player_already_in_game(db, user_id=user_id):
@@ -126,12 +122,13 @@ class ChessNotifier:
         if room_name not in self.chess_boards.keys():  # first connection
             if len(self.connections[room_name]) == 1:  # only one player has joined
                 await self._notify(f"{INFO_PREFIX}::PLAYER::p1", room_name)
+
             else:  # hopefully there is no bug were more than 2 can join
                 await self._notify(f"{INFO_PREFIX}::PLAYER::p2", room_name)
                 log.debug(f"setting new board for {room_name}")
                 self.chess_boards.update(
-                    {f"{room_name}": ChessBoard(INITIAL_GAME)}
-                )  # make a new board for a room
+                    {f"{room_name}": ChessBoard(game_obj.board, int(room_name))}
+                )  # make a new chessboard object for a room
                 await self._notify(
                     f"{BOARD_PREFIX}::{BOARD_PREFIX}::{self.chess_boards[room_name].give_board()}",
                     room_name,
