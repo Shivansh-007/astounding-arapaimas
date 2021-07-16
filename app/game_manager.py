@@ -1,11 +1,12 @@
 from copy import deepcopy
 
 from blessed import Terminal
+from numpy import ones
 
 from app import ascii_art, constants
 from app.chess import ChessBoard
+from app.constants import CHESS_STATUS
 from app.ui.Colour import ColourScheme
-
 
 PIECES = "".join(chr(9812 + x) for x in range(12))
 print(PIECES)
@@ -13,16 +14,8 @@ COL = ("A", "B", "C", "D", "E", "F", "G", "H")
 ROW = tuple(map(str, range(1, 9)))
 
 INITIAL_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-initial_game = [
-    ["r", "n", "b", "q", "k", "b", "n", "r"],
-    ["p"] * 8,
-    ["em"] * 8,
-    ["em"] * 8,
-    ["em"] * 8,
-    ["em"] * 8,
-    ["P"] * 8,
-    ["R", "N", "B", "Q", "K", "B", "N", "R"],
-]
+
+POSSIBLE_CASTLING_MOVES = ("e1g1", "e8g8", "e1c1", "e8c8")
 
 BLACK_PIECES = ("r", "n", "b", "q", "k", "p")
 
@@ -68,18 +61,20 @@ class Game:
         self.term = Terminal()
         self.w = self.term.width
         self.h = self.term.height
+        # TODO:: USE THIS
         self.players = None
+        # TODO:: USE THIS
         self.game_id = None  # the game lobby id that the server will provide for online multiplayer
+        # TODO:: USE THIS
         self.server_ip = None
         self.colour_scheme = "default"
         self.theme = ColourScheme(self.term, theme=self.colour_scheme)
-        # self.chess_board = deepcopy(initial_game)
         self.chess = ChessBoard(INITIAL_FEN)
-        # print(ChessBoard(INITIAL_FEN))
         self.chess_board = self.fen_to_board(self.chess.give_board())
         self.fen = INITIAL_FEN
         self.tile_width = 6
         self.tile_height = 3
+        # TODO:: REMOVE THESE 2 if they're gonna be 0(they are used for spaces b/w tiles)
         self.offset_x = 0
         self.offset_y = 0
         self.x_shift = int(self.w * 0.3)
@@ -88,7 +83,6 @@ class Game:
         self.y = 0
         self.chat_enabled = False
         # self.my_color = 'white' # for future
-        self.white_move = True  # this will change in multiplayer game
         self.selected_row = 0
         self.selected_col = 0
         self.possible_moves = []
@@ -99,8 +93,11 @@ class Game:
         self.chat_box_x = int(self.w * 0.73)
         # self.term.number_of_colors = 256
         # self.handle_arrows()
+        self.moves_played = 0
+        self.moves_limit = 4  # TODO:: MAKE THIS DYNAMIC
+        self.visible_layers = 8
+        self.hidden_layer = ones((self.visible_layers, self.visible_layers))
 
-    # TODO:: IS THIS NEEDED?
     def __len__(self) -> int:
         return 8
 
@@ -271,7 +268,7 @@ class Game:
             + "╭"
             + "─" * 20
             + "╮"
-        )  # $$$$$$$$$$$$$$$$$$
+        )
         print(self.term.move_x(self.w // 13) + "│ Your Previous move │")
         print(self.term.move_x(self.w // 13) + "├" + "─" * 20 + "┤")  # 21
         print(
@@ -286,9 +283,7 @@ class Game:
             + " " * 6
             + "│"
         )
-        print(
-            self.term.move_x(self.w // 13) + "╰" + "─" * 20 + "╯" + self.term.normal
-        )  # 12
+        print(self.term.move_x(self.w // 13) + "╰" + "─" * 20 + "╯" + self.term.normal)
 
     def box(
         self,
@@ -306,18 +301,15 @@ class Game:
         color = self.term.color_rgb(100, 100, 100)
         if not visibility_dull:
             color = self.term.white
-        if not no_checks:
-            if length <= width:
-                content = text[:length]
-            else:
-                content = text[length - width : length]
+        if not no_checks and length > width:
+            content = text[length - width : length]
         else:
             content = text
         print(color + self.term.move_xy(x_pos, y_pos))
         print(self.term.move_x(x_pos) + "╭" + "─" * width + "╮")
         for _ in range(height):
             print(self.term.move_x(x_pos) + "│" + " " * width + "│")
-        print(self.term.move_up)  # $$$$$$$$$$$$$$$$$$
+        print(self.term.move_up)
         if not no_checks:
             print(
                 self.term.move_down(1)
@@ -334,7 +326,7 @@ class Game:
             + self.term.yellow
             + content
             + self.term.normal
-        )  # 12
+        )
 
     def chatbox_history(self, text: str) -> None:
         """Manages chat history to be displayed."""
@@ -440,28 +432,15 @@ class Game:
         with self.term.location(x + x_offset, y + y_offset + (self.tile_height // 2)):
             print(style(str.center(text, self.tile_width)))
 
-    def get_piece_and_color(self, row: int, col: int) -> tuple:
+    def get_piece_meta(self, row: int, col: int) -> tuple:
         """Returns color and piece info of the cell."""
         if (row + col) % 2 == 0:
             bg = self.theme.themes[self.colour_scheme]["white_squares"]
         else:
             bg = self.theme.themes[self.colour_scheme]["black_squares"]
-        piece, color = mapper[self.chess_board[row][col]]
+        piece_value = self.chess_board[row][col]
+        piece, color = mapper[piece_value]
         return (piece, color, bg)
-
-    def is_valid_move(self, move: str) -> bool:
-        """Checks if we are actually using our piece."""
-        if len(move) != 2:
-            return False
-        col = move[0]
-        row = move[1]
-        if col.upper() not in COL or row not in ROW:
-            return False
-        col_index = COL.index(col.upper())
-        row_index = len(self) - int(row)
-        if self.white_move:
-            return self.chess_board[row_index][col_index] in WHITE_PIECES
-        return self.chess_board[row_index][col_index] in BLACK_PIECES
 
     @staticmethod
     def fen_to_board(fen: str) -> list:
@@ -482,9 +461,30 @@ class Game:
                 board.append(row)
         return board
 
+    def get_game_status(self) -> int:
+        """Get status of board."""
+        return self.chess.board.status
+
+    def show_game_over(self) -> None:
+        """Display game over after checkmate."""
+        # end the game and return to game_menu
+        with self.term.cbreak():
+            self.print_message("PRESS Q TO EXIT, ANY OTHER KEY TO RESTART")
+            inp = self.term.inkey()
+            if inp in ("q", "Q"):
+                self.show_game_menu()
+            else:
+                self.show_game_screen()
+
+    def print_message(self, message: str) -> None:
+        """Display message in the screen. For example CHECK, CHECKMATE."""
+        # need to change the position of the message
+        with self.term.location(50, 10):
+            print(self.theme.game_message, message)
+
     def show_game_screen(self) -> None:
         """Shows the chess board."""
-        print(self.term.home + self.term.clear)
+        print(self.term.home + self.term.clear + self.theme.background)
         self.box(
             height=1,
             width=self.chat_box_width,
@@ -492,17 +492,19 @@ class Game:
             y_pos=self.h - 4,
             visibility_dull=True,
         )
+
         with self.term.hidden_cursor():
             for i in range(len(self)):
-                # for every col we need to add number too!
+                # Adding Numbers to indicate rows
                 num = len(self) - i
                 x = self.tile_width // 2
                 y = i * self.tile_height + self.tile_height // 2
                 with self.term.location(x + self.x_shift, y + self.y_shift):
                     print(num)
+
                 for j in range(len(self)):
                     self.update_block(i, j)
-            # adding Alphabets for columns
+            # Adding Numbers to indicate columns
             for i in range(len(self)):
                 with self.term.location(
                     x * 2 - 1 + i * self.tile_width + self.x_shift,
@@ -510,11 +512,10 @@ class Game:
                 ):
                     print(str.center(COL[i], len(self)))
             while True:
-                # available_moves = chessboard.all_available_moves()
                 start_move, end_move = self.handle_arrows()
-                # print(start_move, end_move)
                 with self.term.location(0, self.term.height - 10):
-                    self.chess.move_piece("".join((*start_move, *end_move)).lower())
+                    move = "".join((*start_move, *end_move)).lower()
+                    self.chess.move_piece(move)
                     self.fen = self.chess.give_board()
                     self.chess_board = self.fen_to_board(self.fen)
                     self.show_prev_move(
@@ -523,23 +524,49 @@ class Game:
                         x_pos=COL.index(end_move[0].upper()),
                         y_pos=8 - int(end_move[1]),
                     )
-                    # 3333333333333333333333333
+                if move in POSSIBLE_CASTLING_MOVES:
+                    self.update_board()
+                    continue
                 self.update_block(
                     len(self) - int(end_move[1]), COL.index(end_move[0].upper())
                 )
                 self.update_block(
                     len(self) - int(start_move[1]), COL.index(start_move[0].upper())
                 )
+                self.moves_played += 1
+                if self.get_game_status() == CHESS_STATUS["CHECKMATE"]:
+                    self.print_message("THATS CHECKMATE!")
+                    self.show_game_over()
+                elif self.get_game_status() == CHESS_STATUS["CHECK"]:
+                    pass
+                if (
+                    self.moves_played % self.moves_limit == 0
+                    and self.visible_layers > 2
+                ):
+                    self.visible_layers -= 2
+                    invisible_layers = (8 - self.visible_layers) // 2
+                    self.hidden_layer[0:invisible_layers, :] = 0
+                    self.hidden_layer[-invisible_layers:, :] = 0
+                    self.hidden_layer[:, 0:invisible_layers] = 0
+                    self.hidden_layer[:, -invisible_layers:] = 0
+                    self.update_board()
 
     def update_block(self, row: int, col: int) -> None:
         """Updates block on row and col(we must first mutate actual list first)."""
-        piece, color, bg = self.get_piece_and_color(row, col)
+        piece, color, bg = self.get_piece_meta(row, col)
         if self.selected_row == row and self.selected_col == col:
             bg = self.theme.themes[self.colour_scheme]["selected_square"]
         elif [row, col] in self.possible_moves:
             bg = self.theme.themes[self.colour_scheme]["legal_squares"]
         if self.flag:
             self.flag = False
+        make_invisible = (
+            self.hidden_layer[row][col] == 0
+            and not self.chess_board[row][col] in WHITE_PIECES
+        )
+        if make_invisible:
+            piece = " "
+
         self.draw_tile(
             self.tile_width + col * (self.tile_width + self.offset_x),
             row * (self.tile_height + self.offset_y),
@@ -549,6 +576,12 @@ class Game:
             fg=color,
             bg=bg,
         )
+
+    def update_board(self) -> None:
+        """Updates whole board when needed. Simplest Solution but expensive."""
+        for i in range(8):
+            for j in range(8):
+                self.update_block(i, j)
 
     @staticmethod
     def get_row_col(row: int, col: str) -> tuple:
@@ -561,6 +594,11 @@ class Game:
         piece = piece.lower()
         return [i for i in moves if piece in i]
 
+    def is_white_turn(self) -> bool:
+        """Returns if it's white's turn."""
+        fen_parts = self.fen.split(" ")
+        return fen_parts[1] == "w"
+
     def highlight_moves(self, move: str) -> None:
         """Take a piece and highlights all possible moves."""
         old_moves = deepcopy(self.possible_moves)
@@ -568,6 +606,8 @@ class Game:
         # removes old moves
         for i in old_moves:
             self.update_block(i[0], i[1])
+        if not move:
+            return
         # highlights the possible moves.
         piece = self.chess_board[self.selected_row][self.selected_col]
         if piece == "em":
@@ -577,8 +617,6 @@ class Game:
             y = COL.index(i[2].upper())
             self.possible_moves.append([x, y])
             self.update_block(x, y)
-        with self.term.location(0, self.term.height - 5):
-            print(self.possible_moves)
 
     def handle_arrows(self) -> tuple:
         """Manages the arrow movement on board."""
@@ -620,17 +658,19 @@ class Game:
                     # if clicked empty block
                     if move == "em":
                         continue
+                    is_valid = (
+                        move in WHITE_PIECES
+                        if self.is_white_turn()
+                        else move in BLACK_PIECES
+                    )
+                    if not is_valid:
+                        continue
                     start_move = (
                         COL[self.selected_col],
                         ROW[len(self) - self.selected_row - 1],
                     )
                     self.highlight_moves(start_move)
                 else:
-                    # get what location is selected. eg A7
-                    current_move = (
-                        COL[self.selected_col],
-                        ROW[len(self) - self.selected_row - 1],
-                    )
                     if [self.selected_row, self.selected_col] in self.possible_moves:
                         end_move = (
                             COL[self.selected_col],
@@ -642,19 +682,27 @@ class Game:
                             self.update_block(i[0], i[1])
                         return start_move, end_move
                     else:
-                        # special condition check.
-                        # if enter key is pressed for another piece that can be moved
-                        # change highligting to that piece
-                        self.highlight_moves(current_move)
-                        # this means the move is a valid move so we set it as start_move
-                        if self.possible_moves:
-                            start_move = current_move
+                        if move == "em":
+                            start_move = False
+                            end_move = False
+                            self.highlight_moves(start_move)
+                            continue
+                        is_same_color = (
+                            move in WHITE_PIECES
+                            if self.is_white_turn()
+                            else move in BLACK_PIECES
+                        )
+                        if is_same_color:
+                            start_move = (
+                                COL[self.selected_col],
+                                ROW[len(self) - self.selected_row - 1],
+                            )
+                            end_move = False
+                            self.highlight_moves(start_move)
                             continue
                         start_move = False
-                        old_moves = deepcopy(self.possible_moves)
-                        self.possible_moves = []
-                        for i in old_moves:
-                            self.update_block(i[0], i[1])
+                        end_move = False
+                        self.highlight_moves(start_move)
 
     def start_game(self) -> None:
         """

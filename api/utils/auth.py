@@ -2,10 +2,12 @@ import logging
 import secrets
 import typing as t
 
-from fastapi import HTTPException, Request
+from fastapi import HTTPException, Request, WebSocket
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi.security.utils import get_authorization_scheme_param
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
+from starlette.status import HTTP_403_FORBIDDEN
 
 from api.constants import AuthState, Server
 from api.crud import user
@@ -21,10 +23,9 @@ class JWTBearer(HTTPBearer):
     def __init__(self, auto_error: bool = True):
         super().__init__(auto_error=auto_error)
 
-    async def __call__(
-        self, request: Request, db: t.Optional[Session] = next(get_db())
-    ):
+    async def __call__(self, request: Request):
         """Check if the supplied credentials are valid for this endpoint."""
+        db = next(get_db())
         credentials: HTTPAuthorizationCredentials = await super().__call__(request)
         credentials = credentials.credentials
         if not credentials:
@@ -46,6 +47,44 @@ class JWTBearer(HTTPBearer):
 
         request.state.user_id = int(user_id)
         return credentials
+
+    async def get_user_by_token(self, request: Request) -> int:
+        """Get user ID by authorization token."""
+        credentials: HTTPAuthorizationCredentials = await super().__call__(request)
+        credentials = credentials.credentials
+
+        token_data = jwt.decode(credentials, Server.JWT_SECRET)
+        user_id, _ = token_data["id"], token_data["salt"]
+        return int(user_id)
+
+    async def get_user_by_token_websocket(
+        self, websocket: WebSocket
+    ) -> t.Optional[int]:
+        """Get user ID by authorization token in the websocket header."""
+        authorization = websocket.headers.get("Authorization")
+        scheme, credentials = get_authorization_scheme_param(authorization)
+        if not (authorization and scheme and credentials):
+            if self.auto_error:
+                raise HTTPException(
+                    status_code=HTTP_403_FORBIDDEN, detail="Not authenticated"
+                )
+            else:
+                return None
+        if scheme.lower() != "bearer":
+            if self.auto_error:
+                raise HTTPException(
+                    status_code=HTTP_403_FORBIDDEN,
+                    detail="Invalid authentication credentials",
+                )
+            else:
+                return None
+        credentials = HTTPAuthorizationCredentials(
+            scheme=scheme, credentials=credentials
+        ).credentials
+
+        token_data = jwt.decode(credentials, Server.JWT_SECRET)
+        user_id, _ = token_data["id"], token_data["salt"]
+        return int(user_id)
 
 
 async def reset_user_token(
