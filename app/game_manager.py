@@ -1,6 +1,8 @@
 import json
 import os.path
+import socket
 from copy import deepcopy
+from typing import Optional
 
 import appdirs
 import httpx
@@ -106,6 +108,27 @@ class Game:
 
     def __len__(self) -> int:
         return 8
+
+    def check_network_connection(
+        self,
+        host: Optional[str] = "8.8.8.8",
+        port: Optional[int] = 53,
+        timeout: Optional[int] = 3,
+    ) -> bool:
+        """
+        Ping google server IP and check whether the user has active network connection.
+
+        Host: 8.8.8.8 (google-public-dns-a.google.com)
+        OpenPort: 53/tcp
+        Service: domain (DNS/TCP)
+        """
+        try:
+            socket.setdefaulttimeout(timeout)
+            socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect((host, port))
+            return True
+        except socket.error as ex:
+            print(ex)
+            return False
 
     def ask_or_get_token(self) -> str:
         """
@@ -577,7 +600,6 @@ class Game:
         """
         Starts the chess game.
 
-        TODO : check for net connection
         TODO: Check if console supported
         """
         if self.show_welcome_screen() == "q":
