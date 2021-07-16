@@ -81,7 +81,7 @@ class Game:
         self.y = 0
         self.chat_enabled = False
         # self.my_color = 'white' # for future
-        self.selected_row = 0
+        self.selected_row = 6
         self.selected_col = 0
         self.possible_moves = []
         self.flag = True
@@ -89,9 +89,10 @@ class Game:
         self.chat_hist_height = 1
         self.full_chat_hist = ""
         self.moves_played = 0
-        self.moves_limit = 4  # TODO:: MAKE THIS DYNAMIC
+        self.moves_limit = 100  # TODO:: MAKE THIS DYNAMIC
         self.visible_layers = 8
         self.hidden_layer = ones((self.visible_layers, self.visible_layers))
+        self.king_check = False
 
     def __len__(self) -> int:
         return 8
@@ -482,6 +483,25 @@ class Game:
         with self.term.location(50, 10):
             print(self.theme.game_message, message)
 
+    def highlight_check(self) -> None:
+        """Higligh king if its CHECK."""
+        for i, row in enumerate(self.chess_board):
+            for j, col in enumerate(row):
+                if (col == "K" and self.is_white_turn()) or (
+                    col == "k" and not self.is_white_turn()
+                ):
+                    piece, color, _ = self.get_piece_meta(i, j)
+                    self.draw_tile(
+                        self.tile_width + j * (self.tile_width + self.offset_x),
+                        i * (self.tile_height + self.offset_y),
+                        self.x_shift,
+                        self.y_shift,
+                        text=piece,
+                        fg=color,
+                        bg=self.theme.themes[self.colour_scheme]["check"],
+                    )
+                    break
+
     def show_game_screen(self) -> None:
         """Shows the chess board."""
         print(self.term.home + self.term.clear + self.theme.background)
@@ -512,10 +532,12 @@ class Game:
                 ):
                     print(str.center(COL[i], len(self)))
             while True:
+                # self.print_message(' '*10)
                 start_move, end_move = self.handle_arrows()
                 with self.term.location(0, self.term.height - 10):
                     print("".join((*start_move, *end_move)).lower())
                     self.chess.move_piece("".join((*start_move, *end_move)).lower())
+                    self.king_check = False
                     self.fen = self.chess.give_board()
                     self.chess_board = self.fen_to_board(self.fen)
                     self.show_prev_move(
@@ -537,7 +559,10 @@ class Game:
                     self.show_game_over()
                 elif self.get_game_status() == CHESS_STATUS["CHECK"]:
                     # TODO:: NOTIFY KING
-                    pass
+                    # print('WE ENTERED TO UPDATE ALL')
+                    self.print_message("CHECK DUDE")
+                    self.highlight_check()
+                    self.king_check = True
                 if (
                     self.moves_played % self.moves_limit == 0
                     and self.visible_layers > 2
@@ -698,6 +723,8 @@ class Game:
                         start_move = False
                         end_move = False
                         self.highlight_moves(start_move)
+            if self.king_check:
+                self.highlight_check()
 
     def start_game(self) -> None:
         """
