@@ -75,7 +75,7 @@ class Game:
         self.player = None
         self.game_id = None  # the game lobby id that the server will provide for online multiplayer
         self.local_testing = False
-        self.server = "astounding-arapaimas-pr-38.up.railway.app"
+        self.server = ""
         self.secure = "s"
         self.port = ""
         if self.local_testing:
