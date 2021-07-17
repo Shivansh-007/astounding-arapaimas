@@ -205,17 +205,20 @@ class Game:
             self.player = Player(token)
             # get the game id
             self.headers.update({"Authorization": f"Bearer {self.player.token}"})
+            resp = ""
+            url = f"http{self.secure}://{self.server}{self.port}/game/new"
             try:
-                resp = httpx.get(
-                    f"http{self.secure}://{self.server}{self.port}/game/new",
-                    headers=self.headers,
-                )
+                resp = httpx.get(url, headers=self.headers, timeout=None)
                 if resp.status_code != 200:
-                    raise httpx.HTTPError
+                    return f"server returned Error code {resp.status_code}"
                 self.game_id = resp.json()["room"]
                 return "New lobby created Press [ENTER] to continue"
             except httpx.HTTPError:
-                return f"server returned Error code {resp.status_code}"
+                print(url)
+                raise
+            except httpx.ReadTimeout:
+                print(url)
+                raise
         else:
             return "Restart Game ..."
 
