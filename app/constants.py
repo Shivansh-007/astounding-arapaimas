@@ -76,6 +76,7 @@ class Connections:
     """Stores the API connection urls i.e. the api and websocket url."""
 
     API_URL = os.getenv("API_URL")
+
     WEBSOCKET_URL = os.getenv("WEBSOCKET_URL")
     LOCAL_TESTING = os.getenv("LOCAL_TESTING")
     if LOCAL_TESTING == "True":

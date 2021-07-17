@@ -108,7 +108,7 @@ class Game:
 
         # self.handle_arrows()
         self.moves_played = 0
-        self.moves_limit = 100  # TODO: MAKE THIS DYNAMIC
+        self.moves_limit = 10  # TODO: MAKE THIS DYNAMIC
         self.visible_layers = 8
 
         self.screen = "fullscreen"
@@ -737,7 +737,7 @@ class Game:
     def get_piece_meta(self, row: int, col: int) -> tuple:
         """Get colour and piece information of the cell."""
         if (row + col) % 2 == 0:
-            bg = self.theme.themes[self.colour_scheme]["white_squares"]
+            bg = "grey"  # self.theme.themes[self.colour_scheme]["white_squares"]
         else:
             bg = self.theme.themes[self.colour_scheme]["black_squares"]
         piece_value = self.chess_board[row][col]
@@ -1054,16 +1054,16 @@ class Game:
         start_move = end_move = False
         # look for arrow movements
         while True:
-            print(
-                self.term.color_rgb(100, 100, 100)
-                + self.term.move_xy(self.chat_box_x + 1, self.h - 2)
-                + "Press [TAB] to message your opponent"
-            )
+            # print(
+            #     self.term.color_rgb(100, 100, 100)
+            #     + self.term.move_xy(self.chat_box_x + 1, self.h - 2)
+            #     + "Press [TAB] to message your opponent"
+            # )
             with self.term.cbreak():
                 inp = self.term.inkey()
             # take action according to the key pressed
-            if inp.name == "KEY_TAB":
-                self.chatbox()
+            # if inp.name == "KEY_TAB":
+            #     self.chatbox()
             input_key = repr(inp)
             if input_key == "KEY_DOWN":
                 if self.selected_row < 7:
