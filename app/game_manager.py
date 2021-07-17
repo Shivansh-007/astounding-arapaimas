@@ -7,6 +7,7 @@ from copy import deepcopy
 from typing import Optional
 
 import httpx
+import websocket
 from blessed import Terminal
 from numpy import ones
 from platformdirs import user_cache_dir
@@ -19,6 +20,8 @@ from app import ascii_art
 from app.chess import ChessBoard
 from app.constants import ChessGame, Connections, Menu, WelcomeScreen
 from app.ui.Colour import ColourScheme
+
+websocket.setdefaulttimeout(10)
 
 mapper = {
     "em": ("", "white"),
@@ -1138,11 +1141,15 @@ class Game:
     def reset_class(self) -> None:
         """Reset player game room info."""
         self.game_id = None
-        self.player.player_id = None
+        if self.player.player_id:
+            self.player.player_id = None
 
     def start_game(self) -> None:
-        """Starts the chess game."""
-        # check if the terminal size to ensure UI is rendered properly
+        """
+        Starts the chess game.
+
+        TODO: Check if console supported
+        """
         self.ensure_terminal_size(self.term)
         if self.show_welcome_screen() == "q":
             print(self.term.clear + self.term.exit_fullscreen)
