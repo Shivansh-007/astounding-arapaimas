@@ -147,6 +147,55 @@ class Game:
             print(ex)
             return False
 
+    @staticmethod
+    def ensure_terminal_size(terminal: Terminal) -> None:
+        """Ensure that the terminal is sized so as to properly render the entire game."""
+        t = terminal
+        min_height = 33
+        min_width = 133
+        height, width = t.height, t.width
+        midline = height // 2
+        size_good = False
+        while not size_good:
+            if height >= min_height and width >= min_width:
+
+                print(
+                    t.clear
+                    + t.move_y(midline)
+                    + t.center("Nicely done! Hit [ENTER]] to continue...").rstrip()
+                )
+                while not size_good:
+                    key = t.inkey()
+                    if not key:
+                        continue
+                    elif key.name == "KEY_ENTER":
+                        break
+                size_good = True
+            elif height < min_height:
+                print(
+                    t.clear
+                    + t.move_y(midline)
+                    + t.center(
+                        "Please increase the height of your terminal window!"
+                    ).rstrip()
+                )
+                while height == t.height:
+                    pass
+                height = t.height
+            elif width < min_width:
+                print(
+                    t.clear
+                    + t.move_y(midline)
+                    + t.center(
+                        "Please increase the width of your terminal window!"
+                    ).rstrip()
+                )
+                while width == t.width:
+                    pass
+                width = t.width
+            midline = height // 2
+        return
+
     def ask_or_get_token(self) -> str:
         """
         Ask the user/get token from cache.
@@ -1063,6 +1112,7 @@ class Game:
         TODO : check for net connection
         TODO: Check if console supported
         """
+        self.ensure_terminal_size(self.term)
         if self.show_welcome_screen() == "q":
             print(self.term.clear + self.term.exit_fullscreen)
         else:
