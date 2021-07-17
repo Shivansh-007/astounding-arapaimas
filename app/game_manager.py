@@ -359,6 +359,17 @@ class Game:
             print(self.term.move_x(x_pos) + "│" + " " * width + "│")
         print(self.term.move_up)
         if not no_checks:
+            if length < width:
+                content = self.term.green + content[:4] + self.term.yellow + content[4:]
+            elif 4 - (length - width) >= 0:
+                content = (
+                    self.term.green
+                    + content[: 4 - (length - width)]
+                    + self.term.yellow
+                    + content[4 - (length - width) :]
+                )
+            else:
+                content = self.term.yellow + content
             print(
                 self.term.move_down(1)
                 + self.term.move_x(x_pos)
@@ -381,6 +392,7 @@ class Game:
         if len(text) > self.chat_box_width:
             self.chat_hist_height += (len(text)) // self.chat_box_width
         formatted_text = ""
+        text = self.term.green + text[:4] + self.term.yellow + text[4:]
         for i, char in enumerate(text):
             if (i + 1) % self.chat_box_width == 0:
                 formatted_text += "\n" + self.term.move_x(self.chat_box_x + 1) + char
@@ -413,7 +425,8 @@ class Game:
         )
         with self.term.cbreak():
             flag = ""
-            text = "ME:"
+            text_prefix = "YOU:"
+            text = ""
             char = ""
             while flag != "KEY_ENTER" and flag != "KEY_TAB":
                 if (
@@ -428,7 +441,7 @@ class Game:
                         x_pos=self.chat_box_x,
                         y_pos=self.h - 4,
                         visibility_dull=False,
-                        text=text,
+                        text=text_prefix + text,
                     )
                 if flag == "KEY_BACKSPACE":
                     text = text[: len(text) - 1]
@@ -438,7 +451,7 @@ class Game:
                         x_pos=self.chat_box_x,
                         y_pos=self.h - 4,
                         visibility_dull=False,
-                        text=text,
+                        text=text_prefix + text,
                     )
                 char = self.term.inkey()
                 flag = char.name
@@ -450,7 +463,7 @@ class Game:
                     y_pos=self.h - 4,
                     visibility_dull=True,
                 )
-                self.chatbox_history(text=text)  # Send the message
+                self.chatbox_history(text=text_prefix + text)  # Send the message
             else:
                 self.box(
                     height=1,
