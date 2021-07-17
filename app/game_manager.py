@@ -806,9 +806,7 @@ class Game:
                         self.chess.set_fen(data[2])
                         self.fen = self.chess.give_board()
                         self.chess_board = self.fen_to_board(self.fen)
-                        for i in range(8):
-                            for j in range(8):
-                                self.update_block(i, j)
+                        self.update_board()
                         new_board = True
 
     def player_2_update(self) -> None:
@@ -823,9 +821,7 @@ class Game:
                         self.chess.set_fen(data[2])
                         self.fen = self.chess.give_board()
                         self.chess_board = self.fen_to_board(self.fen)
-                        for i in range(8):
-                            for j in range(8):
-                                self.update_block(i, j)
+                        self.update_board()
                         new_board = True
 
     def render_board(self, start_move: list, end_move: list) -> None:
@@ -893,9 +889,10 @@ class Game:
             bg = self.theme.themes[self.colour_scheme]["legal_squares"]
         if self.flag:
             self.flag = False
+        visible_pieces = WHITE_PIECES if self.player.player_id == 1 else BLACK_PIECES
         make_invisible = (
             self.hidden_layer[row][col] == 0
-            and not self.chess_board[row][col] in WHITE_PIECES
+            and not self.chess_board[row][col] in visible_pieces
         )
         if make_invisible:
             piece = " "
