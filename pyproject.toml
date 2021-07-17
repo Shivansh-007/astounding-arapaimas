@@ -30,6 +30,7 @@ websockets = "^9.1"
 uvicorn = "^0.14.0"
 Jinja2 = "^3.0.1"
 platformdirs = "^2.0.2"
+python-dotenv = "^0.18.0"
 
 [tool.poetry.dev-dependencies]
 flake8 = "^3.8"
