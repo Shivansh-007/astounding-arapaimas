@@ -272,7 +272,10 @@ class Game:
 
             # server up
             try:
-                token = self.ask_or_get_token()
+                if Connections.LOCAL_TESTING == "True":
+                    token = Connections.TOKEN_1
+                else:
+                    token = self.ask_or_get_token()
             except KeyboardInterrupt:
                 return "BACK"
 
@@ -302,7 +305,10 @@ class Game:
         if not self.game_id:
             self.game_id = input("Enter Game id :- ").strip()
         if not self.player:
-            self.player = Player(self.ask_or_get_token())
+            if Connections.LOCAL_TESTING == "True":
+                self.player = Player(Connections.TOKEN_2)
+            else:
+                self.player = Player(self.ask_or_get_token())
             self.headers = {"Authorization": f"Bearer {self.player.token}"}
 
         ws_url = f"{self.ws_url}/game/{self.game_id}"
@@ -1141,7 +1147,7 @@ class Game:
     def reset_class(self) -> None:
         """Reset player game room info."""
         self.game_id = None
-        if self.player.player_id:
+        if self.player:
             self.player.player_id = None
 
     def start_game(self) -> None:
@@ -1175,12 +1181,13 @@ class Game:
                     # open settings menu
                     pass
                 print(self.term.home + self.theme.background + self.term.clear)
-                if self.player.player_id:
-                    try:
-                        self.show_game_screen()
-                    except Exception as e:
-                        print(e)
-                        raise
+                if self.player:
+                    if self.player.player_id:
+                        try:
+                            self.show_game_screen()
+                        except Exception as e:
+                            print(e)
+                            raise
             # exit the game peacefully
             self.web_socket.close()
             print(self.term.clear + self.term.exit_fullscreen + self.term.clear)
