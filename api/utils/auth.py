@@ -57,6 +57,25 @@ class JWTBearer(HTTPBearer):
         user_id, _ = token_data["id"], token_data["salt"]
         return int(user_id)
 
+    async def get_user_by_plain_token(self, token: str) -> int:
+        """Get user ID by plain authorization token passed as a string."""
+        db = next(get_db())
+        try:
+            token_data = jwt.decode(token, Server.JWT_SECRET)
+        except JWTError:
+            raise HTTPException(status_code=403, detail=AuthState.INVALID_TOKEN.value)
+
+        user_id, token_salt = token_data["id"], token_data["salt"]
+        user_state = user.get_by_user_id(db, user_id=user_id)
+
+        # Handle bad scenarios
+        if user_state is None or user_state.token_salt != token_salt:
+            raise HTTPException(status_code=403, detail=AuthState.INVALID_TOKEN.value)
+        elif user_state.is_banned:
+            raise HTTPException(status_code=403, detail=AuthState.BANNED.value)
+
+        return int(user_id)
+
     async def get_user_by_token_websocket(
         self, websocket: WebSocket
     ) -> t.Optional[int]:
