@@ -28,6 +28,7 @@ class ColourScheme:
             "black_squares": "gray69",
             "selected_square": "red",
             "legal_squares": "orange",
+            "check": "yellow",
             "game_message": "black_on_blue",
             "ws_bottom": "green_on_black",
             "ws_top": "red_on_black",
