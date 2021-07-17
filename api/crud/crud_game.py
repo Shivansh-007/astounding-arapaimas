@@ -103,5 +103,15 @@ class CRUDGame(CRUDBase[Game, GameCreate, GameUpdate]):
         db.refresh(game_obj)
         return game_obj
 
+    def get_player_count(self, db: Session, *, game_id: int) -> int:
+        """Returns the number of players in a room."""
+        len_players = 0
+        game_obj = self.get_by_game_id(db, game_id=game_id)
+        if game_obj.player_one_id:
+            len_players += 1
+        if game_obj.player_two_id:
+            len_players += 1
+        return len_players
+
 
 game = CRUDGame(Game)
