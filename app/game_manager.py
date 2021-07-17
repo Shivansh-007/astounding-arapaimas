@@ -348,7 +348,7 @@ class Game:
                     5, self.term.height - len(ascii_art.THINK.split("\n")) + i
                 ):
                     print(self.theme.ws_think(val))
-
+            # Accept any key press to move to next screen
             keypress = self.term.inkey()
             return keypress
 
@@ -360,7 +360,7 @@ class Game:
         Create Game, Join Game, settings and exit. Each have a description which
         can be rendered on pressing `KEY_TAB`.
         """
-
+        # print all game menu options
         def print_options() -> None:
             for i, option in enumerate(
                 Menu.MENU_MAPPING.items()
@@ -429,7 +429,7 @@ class Game:
         for option in Menu.MENU_MAPPING:
             term_positions.append(position)
             position += len(option) + spacing
-
+        # draw the ascii art of game menu
         title_split = ascii_art.menu_logo.rstrip().split("\n")
         max_chars = len(max(title_split, key=len))
         with self.term.cbreak(), self.term.hidden_cursor():
@@ -684,10 +684,12 @@ class Game:
     ) -> None:
         """Draws a single chess tile and prints the `text` in the middle of it."""
         style = getattr(self.term, f"{fg}_on_{bg}")
+        # draw the tiles row by row
         for j in range(y, y + self.tile_height):
             for i in range(x, x + self.tile_width):
                 with self.term.location(i + x_offset, j + y_offset):
                     print(style(" "))
+        # draw the chess piece
         with self.term.location(x + x_offset, y + y_offset + (self.tile_height // 2)):
             print(style(str.center(text, self.tile_width)))
 
@@ -734,6 +736,7 @@ class Game:
             if inp in ("q", "Q"):
                 self.show_game_menu()
             else:
+                # reset the board and restart the game
                 self.__init__()
                 self.show_game_screen()
 
@@ -752,9 +755,11 @@ class Game:
         """Higligh king if its CHECK."""
         for i, row in enumerate(self.chess_board):
             for j, col in enumerate(row):
+                # identify whose piece in in check
                 if (col == "K" and self.is_white_turn()) or (
                     col == "k" and not self.is_white_turn()
                 ):
+                    # highlight the KING
                     piece, color, _ = self.get_piece_meta(i, j)
                     self.draw_tile(
                         self.tile_width + j * (self.tile_width + self.offset_x),
@@ -815,7 +820,7 @@ class Game:
                     self.player_1_update()
                 elif self.player.player_id == 2:
                     self.player_2_update()
-
+                # get the move for a user
                 start_move, end_move = self.handle_arrows()
                 move = "".join((*start_move, *end_move)).lower()
                 self.render_board(start_move, end_move)
@@ -868,14 +873,12 @@ class Game:
 
         updating only the place where the move was made and not the whole screen
         """
-        # with self.term.location(0, self.term.height - 10):
         move = "".join((*start_move, *end_move)).lower()
         self.chess.move_piece(move)
         self.king_check = False
-
+        # post the message according to which users move it is
         content = "WHITEs MOVE" if not self.is_white_turn() else "BLACKs MOVE"
         self.print_message("STATUS", content=content)
-
         self.fen = self.chess.give_board()
         self.chess_board = self.fen_to_board(self.fen)
         self.chess_status_display(
@@ -884,6 +887,7 @@ class Game:
             x_pos=ChessGame.COL.index(end_move[0].upper()),
             y_pos=8 - int(end_move[1]),
         )
+        # check for CASTLING
         if move in ChessGame.POSSIBLE_CASTLING_MOVES:
             self.update_board()
             return
@@ -894,12 +898,14 @@ class Game:
             len(self) - int(start_move[1]), ChessGame.COL.index(start_move[0].upper())
         )
         self.moves_played += 1
+        # check for checkmate and end game
         if self.get_game_status() == ChessGame.STATUS["CHECKMATE"]:
             self.print_message(
                 "CHECKMATE. GAME OVER",
                 content="PRESS Q TO EXIT",
             )
             self.show_game_over()
+        # check for CHECK and display status
         elif self.get_game_status() == ChessGame.STATUS["CHECK"]:
             self.print_message("CHECK", content="PLAY YOUR KING")
             self.highlight_check()
@@ -913,7 +919,7 @@ class Game:
             ChessGame.COL.index(start_move[0].upper()),
         )
         self.moves_played += 1
-
+        # change visible zone
         if self.moves_played % self.moves_limit == 0 and self.visible_layers > 2:
             self.visible_layers -= 2
             invisible_layers = (8 - self.visible_layers) // 2
@@ -1005,9 +1011,8 @@ class Game:
     def handle_arrows(self) -> tuple:
         """Manages the arrow movement on board."""
         start_move = end_move = False
-
+        # look for arrow movements
         while True:
-
             print(
                 self.term.color_rgb(100, 100, 100)
                 + self.term.move_xy(self.chat_box_x + 1, self.h - 2)
@@ -1015,7 +1020,7 @@ class Game:
             )
             with self.term.cbreak():
                 inp = self.term.inkey()
-
+            # take action according to the key pressed
             if inp.name == "KEY_TAB":
                 self.chatbox()
             input_key = repr(inp)
@@ -1105,6 +1110,7 @@ class Game:
 
     def start_game(self) -> None:
         """Starts the chess game."""
+        # check if the terminal size to ensure UI is rendered properly
         self.ensure_terminal_size(self.term)
         if self.show_welcome_screen() == "q":
             print(self.term.clear + self.term.exit_fullscreen)
