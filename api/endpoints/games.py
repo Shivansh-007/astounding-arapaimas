@@ -157,7 +157,19 @@ class ChessNotifier:
                 await self._notify(f"{INFO_PREFIX}::READY", room_name)
         else:
             # coming here after disconnect
-            await self._notify(
+            # tell if player 1 or player 2
+            if game_obj.player_one_id == user_id:
+                await self._notify_private(
+                    websocket, f"{INFO_PREFIX}::PLAYER::p1", room_name
+                )
+            elif game_obj.player_two_id == user_id:
+                await self._notify_private(
+                    websocket, f"{INFO_PREFIX}::PLAYER::p2", room_name
+                )
+
+            await self._notify_private(websocket, f"{INFO_PREFIX}::READY", room_name)
+            await self._notify_private(
+                websocket,
                 f"{BOARD_PREFIX}::{BOARD_PREFIX}::{self.chess_boards[room_name].give_board()}",
                 room_name,
             )
