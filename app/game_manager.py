@@ -30,6 +30,7 @@ from app.constants import (
     WHITE_PIECES,
 )
 from app.ui.Colour import ColourScheme
+
 mapper = {
     "em": ("", "white"),
     "K": (PIECES[0], "white"),
@@ -775,7 +776,7 @@ class Game:
                     self.chess.set_fen(data[2])
                 except Exception:
                     print(data)
-                        raise
+                    raise
 
     def player_1_update(self) -> None:
         """Function to get the latest FEN from the server after P2 makes a move."""
@@ -794,7 +795,6 @@ class Game:
                                 self.update_block(i, j)
                         new_board = True
 
-
     def player_2_update(self) -> None:
         """Function to get the latest FEN from the server after P1 makes a move."""
         if self.is_white_turn():  # the last move was made by white (p1)
@@ -812,20 +812,17 @@ class Game:
                                 self.update_block(i, j)
                         new_board = True
 
-
     def render_board(self, start_move: list, end_move: list) -> None:
         """
         Renders the board on the terminal.
 
         updating only the place where the move was made and not the whole screen
         """
-#         with self.term.location(0, self.term.height - 10):
+        #         with self.term.location(0, self.term.height - 10):
         move = "".join((*start_move, *end_move)).lower()
         self.chess.move_piece(move)
         self.king_check = False
-        content = (
-            "WHITEs MOVE" if not self.is_white_turn() else "BLACKs MOVE"
-        )
+        content = "WHITEs MOVE" if not self.is_white_turn() else "BLACKs MOVE"
         self.print_message("STATUS", content=content)
 
         self.fen = self.chess.give_board()
@@ -838,10 +835,8 @@ class Game:
         )
         if move in POSSIBLE_CASTLING_MOVES:
             self.update_board()
-            continue
-        self.update_block(
-            len(self) - int(end_move[1]), COL.index(end_move[0].upper())
-        )
+            return
+        self.update_block(len(self) - int(end_move[1]), COL.index(end_move[0].upper()))
         self.update_block(
             len(self) - int(start_move[1]), COL.index(start_move[0].upper())
         )
@@ -864,11 +859,7 @@ class Game:
         )
         self.moves_played += 1
 
-
-        if (
-            self.moves_played % self.moves_limit == 0
-            and self.visible_layers > 2
-        ):
+        if self.moves_played % self.moves_limit == 0 and self.visible_layers > 2:
             self.visible_layers -= 2
             invisible_layers = (8 - self.visible_layers) // 2
             self.hidden_layer[0:invisible_layers, :] = 0
@@ -876,8 +867,6 @@ class Game:
             self.hidden_layer[:, 0:invisible_layers] = 0
             self.hidden_layer[:, -invisible_layers:] = 0
             self.update_board()
-
-                # self.print_message(' '*10)
 
     def update_block(self, row: int, col: int) -> None:
         """Updates block on row and col(we must first mutate actual list first)."""
@@ -952,11 +941,13 @@ class Game:
             y = COL.index(i[2].upper())
             self.possible_moves.append([x, y])
             self.update_block(x, y)
+
     def handle_arrows(self) -> tuple:
         """Manages the arrow movement on board."""
         start_move = end_move = False
 
         while True:
+
             print(
                 self.term.color_rgb(100, 100, 100)
                 + self.term.move_xy(self.chat_box_x + 1, self.h - 2)
