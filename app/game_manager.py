@@ -84,9 +84,6 @@ class Game:
         # self.my_color = 'white' # for future
         self.white_move = True  # this will change in multiplayer game
 
-        # TODO:: REMOVE THESE 2 if they're gonna be 0(they are used for spaces b/w tiles)
-        self.offset_x = 0
-        self.offset_y = 0
         self.x_shift = int(self.w * 0.3)
         self.y_shift = int(self.h * 0.2)
 
@@ -107,7 +104,7 @@ class Game:
 
         # self.handle_arrows()
         self.moves_played = 0
-        self.moves_limit = 100  # TODO:: MAKE THIS DYNAMIC
+        self.moves_limit = 100  # TODO: MAKE THIS DYNAMIC
         self.visible_layers = 8
 
         self.screen = "fullscreen"
@@ -948,8 +945,8 @@ class Game:
             piece = " "
 
         self.draw_tile(
-            self.tile_width + col * (self.tile_width + self.offset_x),
-            row * (self.tile_height + self.offset_y),
+            self.tile_width + col * self.tile_width,
+            row * self.tile_height,
             self.x_shift,
             self.y_shift,
             text=piece,
@@ -1107,12 +1104,7 @@ class Game:
         self.player.player_id = None
 
     def start_game(self) -> None:
-        """
-        Starts the chess game.
-
-        TODO : check for net connection
-        TODO: Check if console supported
-        """
+        """Starts the chess game."""
         self.ensure_terminal_size(self.term)
         if self.show_welcome_screen() == "q":
             print(self.term.clear + self.term.exit_fullscreen)

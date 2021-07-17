@@ -17,10 +17,8 @@ log = logging.getLogger(__name__)
 router = APIRouter(tags=["Game Endpoints"], dependencies=[Depends(auth.JWTBearer())])
 
 INITIAL_GAME = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-BOARD_PREFIX = "BOARD"  # add this to yaml config
+BOARD_PREFIX = "BOARD"
 INFO_PREFIX = "INFO"
-
-# todo add Chat
 
 
 @router.get("/new")
