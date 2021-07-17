@@ -1,3 +1,5 @@
+import os
+
 from app import ascii_art
 
 GAME_WELCOME_BOTTOM = (
@@ -55,3 +57,6 @@ POSSIBLE_CASTLING_MOVES = ("e1g1", "e8g8", "e1c1", "e8c8")
 BLACK_PIECES = ("r", "n", "b", "q", "k", "p")
 
 WHITE_PIECES = ("R", "N", "B", "Q", "K", "P")
+
+API_URL = os.getenv("API_URL")
+WEBSOCKET_URL = os.getenv("WEBSOCKET_URL")

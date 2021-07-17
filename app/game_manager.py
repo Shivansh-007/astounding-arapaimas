@@ -17,6 +17,7 @@ from websocket import (
 from app import ascii_art
 from app.chess import ChessBoard
 from app.constants import (
+    API_URL,
     BLACK_PIECES,
     CHESS_STATUS,
     COL,
@@ -27,6 +28,7 @@ from app.constants import (
     PIECES,
     POSSIBLE_CASTLING_MOVES,
     ROW,
+    WEBSOCKET_URL,
     WHITE_PIECES,
 )
 from app.ui.Colour import ColourScheme
@@ -74,18 +76,15 @@ class Game:
         self.term = Terminal()
         self.player = None
         self.game_id = None  # the game lobby id that the server will provide for online multiplayer
-        self.local_testing = False
-        self.server = "astounding-arapaimas-pr-45.up.railway.app"
-        self.secure = "s"
-        self.port = ""
-        if self.local_testing:
-            self.port = ":8000"
-            self.server = "127.0.0.1"
-            self.secure = ""
+
+        self.api_url = API_URL
+        self.webscoket_url = WEBSOCKET_URL
         self.headers = dict()
         self.web_socket = WebSocket()
+
         self.w = self.term.width
         self.h = self.term.height
+
         self.colour_scheme = "default"
         self.theme = ColourScheme(self.term, theme=self.colour_scheme)
 
@@ -95,30 +94,36 @@ class Game:
 
         self.tile_width = 6
         self.tile_height = 3
+
         # self.my_color = 'white' # for future
         self.white_move = True  # this will change in multiplayer game
+
         # TODO:: REMOVE THESE 2 if they're gonna be 0(they are used for spaces b/w tiles)
         self.offset_x = 0
         self.offset_y = 0
         self.x_shift = int(self.w * 0.3)
         self.y_shift = int(self.h * 0.2)
+
         self.x = 0
         self.y = 0
+
         self.chat_enabled = False
-        # self.my_color = 'white' # for future
-        self.selected_row = 6
-        self.selected_col = 0
-        self.possible_moves = []
-        self.flag = True
         self.chat_box_width = self.w - int(self.w * 0.745) - 1
         self.chat_hist_height = 1
         self.full_chat_hist = ""
         self.chat_box_x = int(self.w * 0.70)
-        # self.term.number_of_colors = 256
+
+        self.selected_row = 6
+        self.selected_col = 0
+        self.possible_moves = []
+
+        self.flag = True
+
         # self.handle_arrows()
         self.moves_played = 0
         self.moves_limit = 100  # TODO:: MAKE THIS DYNAMIC
         self.visible_layers = 8
+
         self.screen = "fullscreen"
         self.hidden_layer = ones((self.visible_layers, self.visible_layers))
         self.king_check = False
@@ -217,7 +222,7 @@ class Game:
         token = input("Enter your API token")
         while not token_ok:
             r = httpx.put(
-                f"http{self.secure}://{self.server}{self.port}/validate_token",
+                f"{self.api_url}/validate_token",
                 json={"token": token},
             )
             if r.status_code != 200:
@@ -243,19 +248,22 @@ class Game:
             try:
                 if not self.check_network_connection():
                     return f"{self.term.blink}Can't connect to internet"
-                httpx.get(f"http{self.secure}://{self.server}{self.port}/")
+                httpx.get(self.api_url)
             except httpx.ConnectError:
-                return f"{self.term.blink}Can't connect to  {self.server}"
+                return f"{self.term.blink}Can't connect to {self.api_url}"
+
             # server up
             try:
                 token = self.ask_or_get_token()
             except KeyboardInterrupt:
                 return "BACK"
+
             self.player = Player(token)
             # get the game id
             self.headers.update({"Authorization": f"Bearer {self.player.token}"})
             resp = ""
-            url = f"http{self.secure}://{self.server}{self.port}/game/new"
+            url = f"{self.api_url}/game/new"
+
             try:
                 resp = httpx.get(url, headers=self.headers, timeout=None)
                 if resp.status_code != 200:
@@ -278,10 +286,10 @@ class Game:
         if not self.player:
             self.player = Player(self.ask_or_get_token())
             self.headers = {"Authorization": f"Bearer {self.player.token}"}
-        ws_url = f"ws{self.secure}://{self.server}{self.port}/game/{self.game_id}"
+
+        ws_url = f"{self.ws_url}/game/{self.game_id}"
         data = ""
         try:
-
             self.web_socket.connect(ws_url, header=self.headers)
             data = "INFO::INIT"
             print(self.term.home + self.theme.background + self.term.clear)
@@ -289,11 +297,11 @@ class Game:
             print("Waiting for all players to connect ....")
 
             while data[1] != "READY":
-
                 data = self.web_socket.recv().split("::")
                 if data[1] == "PLAYER":  # INFO::PLAYER::p1
                     self.player.player_id = int(data[2][-1])
                     print(self.player.player_id)
+
             return "READY"
 
         except WebSocketBadStatusException:
@@ -503,12 +511,7 @@ class Game:
             + "│"
         )
         print(self.term.move_x(self.w // 13) + "├" + "─" * box_width + "┤")  # 21
-        # formatted_content = ""
-        # for i,char in enumerate(content):
-        #     if (i+1) % box_width == 0:
-        #         formatted_content += '\n'+self.term.move_x(self.w // 13)+char
-        #     else:
-        #         formatted_content += char
+
         if is_last_move:
             print(
                 self.term.move_x(self.w // 13)
