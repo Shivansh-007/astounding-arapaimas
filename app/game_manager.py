@@ -1,8 +1,18 @@
+import json
+import logging
+import os.path
+import socket
 from copy import deepcopy
 from typing import Optional
 
+import httpx
 from blessed import Terminal
 from numpy import ones
+from platformdirs import user_cache_dir
+from websocket import (
+    WebSocket,
+    WebSocketBadStatusException,
+)
 
 from app import ascii_art
 from app.chess import ChessBoard
@@ -37,12 +47,15 @@ mapper = {
     "p": (PIECES[11], "black"),
 }
 
+log = logging.getLogger(__name__)
+
 
 class Player:
     """Class for defining a player."""
 
-    def __init__(self, player_id: str):
-        self.id = player_id
+    def __init__(self, token: str = None):
+        self.token = token
+        self.player_id = None
         self.game_history = None  # stores the result of the previous games
 
 
@@ -59,21 +72,31 @@ class Game:
 
     def __init__(self):
         self.term = Terminal()
+        self.player = None
+        self.game_id = None  # the game lobby id that the server will provide for online multiplayer
+        self.local_testing = True
+        self.server = "astounding-arapaimas-pr-38.up.railway.app"
+        self.secure = "s"
+        self.port = ""
+        if self.local_testing:
+            self.port = ":8000"
+            self.server = "127.0.0.1"
+            self.secure = ""
+        self.headers = dict()
+        self.web_socket = WebSocket()
         self.w = self.term.width
         self.h = self.term.height
-        # TODO:: USE THIS
-        self.players = None
-        # TODO:: USE THIS
-        self.game_id = None  # the game lobby id that the server will provide for online multiplayer
-        # TODO:: USE THIS
-        self.server_ip = None
         self.colour_scheme = "default"
         self.theme = ColourScheme(self.term, theme=self.colour_scheme)
+
         self.chess = ChessBoard(INITIAL_FEN)
         self.chess_board = self.fen_to_board(self.chess.give_board())
         self.fen = INITIAL_FEN
+
         self.tile_width = 6
         self.tile_height = 3
+        # self.my_color = 'white' # for future
+        self.white_move = True  # this will change in multiplayer game
         # TODO:: REMOVE THESE 2 if they're gonna be 0(they are used for spaces b/w tiles)
         self.offset_x = 0
         self.offset_y = 0
@@ -96,20 +119,146 @@ class Game:
         self.moves_played = 0
         self.moves_limit = 100  # TODO:: MAKE THIS DYNAMIC
         self.visible_layers = 8
+        self.screen = "fullscreen"
         self.hidden_layer = ones((self.visible_layers, self.visible_layers))
         self.king_check = False
 
     def __len__(self) -> int:
         return 8
 
-    def create_lobby(self) -> int:
+    @staticmethod
+    def check_network_connection(
+        host: Optional[str] = "8.8.8.8",
+        port: Optional[int] = 53,
+        timeout: Optional[int] = 3,
+    ) -> bool:
+        """
+        Ping google server IP and check whether the user has active network connection.
+
+        Host: 8.8.8.8 (google-public-dns-a.google.com)
+        OpenPort: 53/tcp
+        Service: domain (DNS/TCP)
+        """
+        try:
+            socket.setdefaulttimeout(timeout)
+            socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect((host, port))
+            return True
+        except socket.error as ex:
+            print(ex)
+            return False
+
+    def ask_or_get_token(self) -> str:
+        """
+        Ask the user/get token from cache.
+
+        If token is found in user's cache then read that else ask
+        the user for the token, validate it through the API and store it
+        in user's cache.
+        """
+        cache_path = f'{user_cache_dir("stealth_chess")}/token.json'
+        if os.path.exists(cache_path):
+            # Read file token from file as cache exists
+            with open(cache_path, "r", encoding="utf-8") as file:
+                token = (json.load(file)).get("token")
+                if token:
+                    return token
+
+        # If cache file is not found
+        token_ok = False
+        token = input("Enter your API token")
+        while not token_ok:
+            r = httpx.put(
+                f"http{self.secure}://{self.server}{self.port}/validate_token",
+                json={"token": token},
+            )
+            if r.status_code != 200:
+                token = input("Invalid token, enter the correct one: ")
+            else:
+                token_ok = True
+
+        token = {"token": token}  # ask token
+
+        # Make the cache folder for storing the token
+        directory = os.path.dirname(cache_path)
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
+        # Write the token to cache file
+        with open(cache_path, "w+", encoding="utf-8") as file:
+            json.dump(token, file, ensure_ascii=False, indent=4)
+        return token["token"]
+
+    def create_lobby(self) -> str:
         """Used to create a game lobby on the server or locally."""
-        pass
+        if not self.game_id:
+            try:
+                if not self.check_network_connection():
+                    return f"{self.term.blink}Can't connect to internet"
+                httpx.get(f"http{self.secure}://{self.server}{self.port}/")
+            except httpx.ConnectError:
+                return f"{self.term.blink}Can't connect to  {self.server}"
+            # server up
+            try:
+                token = self.ask_or_get_token()
+            except KeyboardInterrupt:
+                return "BACK"
+            self.player = Player(token)
+            # get the game id
+            self.headers.update({"Authorization": f"Bearer {self.player.token}"})
+            try:
+                resp = httpx.get(
+                    f"http{self.secure}://{self.server}{self.port}/game/new",
+                    headers=self.headers,
+                )
+                if resp.status_code != 200:
+                    raise httpx.HTTPError
+                self.game_id = resp.json()["room"]
+                return "New lobby created Press [ENTER] to continue"
+            except httpx.HTTPError:
+                return f"server returned Error code {resp.status_code}"
+        else:
+            return "Restart Game ..."
+
+    def connect_to_lobby(self) -> str:
+        """Connect to a lobby after Creating one or with game_id."""
+        if not self.game_id:
+            self.game_id = input("Enter Game id :- ").strip()
+        if not self.player:
+            self.player = Player(self.ask_or_get_token())
+            self.headers = {"Authorization": f"Bearer {self.player.token}"}
+        ws_url = f"ws{self.secure}://{self.server}{self.port}/game/{self.game_id}"
+        data = ""
+        try:
+
+            self.web_socket.connect(ws_url, header=self.headers)
+            data = "INFO::INIT"
+            print(self.term.home + self.theme.background + self.term.clear)
+            print(f"lobby id :- {self.game_id}")
+            print("Waiting for all players to connect ....")
+
+            while data[1] != "READY":
+
+                data = self.web_socket.recv().split("::")
+                if data[1] == "PLAYER":  # INFO::PLAYER::p1
+                    self.player.player_id = int(data[2][-1])
+                    print(self.player.player_id)
+            return "READY"
+
+        except WebSocketBadStatusException:
+            return "Sever Error pls.. Try Again...."
+        except Exception:
+            log.error(f"{data} {ws_url}")
+            raise
 
     def show_welcome_screen(self) -> str:
-        """Prints startup screen and return pressed key."""
+        """
+        Prints startup screen and return pressed key.
+
+        Draws the ASCII chess pieces on the top/bottom of the terminal.
+        """
         with self.term.cbreak():
             print(self.term.home + self.theme.background + self.term.clear)
+
             # draw bottom chess pieces
             padding = (
                 self.term.width
@@ -155,11 +304,18 @@ class Game:
                     5, self.term.height - len(ascii_art.THINK.split("\n")) + i
                 ):
                     print(self.theme.ws_think(val))
+
             keypress = self.term.inkey()
             return keypress
 
     def show_game_menu(self) -> str:
-        """Prints the game-menu screen."""
+        """
+        Main game menu.
+
+        This is the main game menu showing all the four possible options i.e.
+        Create Game, Join Game, settings and exit. Each have a description which
+        can be rendered on pressing `KEY_TAB`.
+        """
 
         def print_options() -> None:
             for i, option in enumerate(MENU_MAPPING.items()):  # updates the options
@@ -241,12 +397,13 @@ class Game:
                 print(self.term.center(component))
             print(self.term.move_down(3))  # Sets the cursor to the options position
             print_options()
-            while (
-                pressed := self.term.inkey().name
-            ) != "KEY_ENTER":  # Loops till the user chooses an option
+
+            # Loop till the user chooses an option or presses tab to show the description
+            while (pressed := self.term.inkey().name) != "KEY_ENTER":
                 if pressed == "KEY_TAB":
                     select_option()
                     print_options()
+
         print(self.term.home + self.term.clear)  # Resets the terminal
 
         if not self.curr_highlight:
@@ -471,7 +628,7 @@ class Game:
         fg: str = "black",
         bg: str = "white",
     ) -> None:
-        """Draws one tile and text inside of it."""
+        """Draws a single chess tile and prints the `text` in the middle of it."""
         style = getattr(self.term, f"{fg}_on_{bg}")
         for j in range(y, y + self.tile_height):
             for i in range(x, x + self.tile_width):
@@ -481,7 +638,7 @@ class Game:
             print(style(str.center(text, self.tile_width)))
 
     def get_piece_meta(self, row: int, col: int) -> tuple:
-        """Returns color and piece info of the cell."""
+        """Get colour and piece information of the cell."""
         if (row + col) % 2 == 0:
             bg = self.theme.themes[self.colour_scheme]["white_squares"]
         else:
@@ -492,7 +649,7 @@ class Game:
 
     @staticmethod
     def fen_to_board(fen: str) -> list:
-        """Return the chess array representation of FEN."""
+        """Convert the chess array to a FEN representation of it."""
         board = []
         fen_parts = fen.split(" ")
         board_str = fen_parts[0]
@@ -502,6 +659,8 @@ class Game:
             else:
                 row = []
                 for j in i:
+                    # numeric is when the chess tile is empty
+                    # `em` points to empty chess tile
                     if j.isnumeric():
                         row = row + ["em"] * int(j)
                     else:
@@ -564,7 +723,6 @@ class Game:
             y_pos=self.h - 4,
             visibility_dull=True,
         )
-
         with self.term.hidden_cursor():
             for i in range(len(self)):
                 # Adding Numbers to indicate rows
@@ -576,64 +734,139 @@ class Game:
 
                 for j in range(len(self)):
                     self.update_block(i, j)
-            # Adding Numbers to indicate columns
+            # Adding Alphabets to indicate columns
             for i in range(len(self)):
                 with self.term.location(
                     x * 2 - 1 + i * self.tile_width + self.x_shift,
                     len(self) * self.tile_height + self.y_shift + 1,
                 ):
                     print(str.center(COL[i], len(self)))
-            while True:
-                # self.print_message(' '*10)
-                start_move, end_move = self.handle_arrows()
-                with self.term.location(0, self.term.height - 10):
-                    move = "".join((*start_move, *end_move)).lower()
-                    self.chess.move_piece(move)
-                    self.king_check = False
-                    content = (
-                        "WHITEs MOVE" if not self.is_white_turn() else "BLACKs MOVE"
-                    )
-                    self.print_message("STATUS", content=content)
 
+            try:
+                self.web_socket.send("BOARD::GET_BOARD")
+                no = True
+                while no:
+                    data = self.web_socket.recv().split("::")
+                    self.chess.set_fen(data[2])
                     self.fen = self.chess.give_board()
-                    self.chess_board = self.fen_to_board(self.fen)
-                    self.chess_status_display(
-                        start="".join(start_move),
-                        end="".join(end_move),
-                        x_pos=COL.index(end_move[0].upper()),
-                        y_pos=8 - int(end_move[1]),
-                    )
-                if move in POSSIBLE_CASTLING_MOVES:
-                    self.update_board()
-                    continue
-                self.update_block(
-                    len(self) - int(end_move[1]), COL.index(end_move[0].upper())
-                )
-                self.update_block(
-                    len(self) - int(start_move[1]), COL.index(start_move[0].upper())
-                )
-                self.moves_played += 1
-                if self.get_game_status() == CHESS_STATUS["CHECKMATE"]:
-                    self.print_message(
-                        "CHECKMATE. GAME OVER",
-                        content="PRESS Q TO EXIT",
-                    )
-                    self.show_game_over()
-                elif self.get_game_status() == CHESS_STATUS["CHECK"]:
-                    self.print_message("CHECK", content="PLAY YOUR KING")
-                    self.highlight_check()
-                    self.king_check = True
-                if (
-                    self.moves_played % self.moves_limit == 0
-                    and self.visible_layers > 2
-                ):
-                    self.visible_layers -= 2
-                    invisible_layers = (8 - self.visible_layers) // 2
-                    self.hidden_layer[0:invisible_layers, :] = 0
-                    self.hidden_layer[-invisible_layers:, :] = 0
-                    self.hidden_layer[:, 0:invisible_layers] = 0
-                    self.hidden_layer[:, -invisible_layers:] = 0
-                    self.update_board()
+                    no = False
+            except Exception:
+                print(data)
+                raise
+
+            while True:
+                # available_moves = chessboard.all_available_moves()
+                # get the latest board
+                if self.player.player_id == 1:
+                    self.player_1_update()
+                elif self.player.player_id == 2:
+                    self.player_2_update()
+
+                start_move, end_move = self.handle_arrows()
+                move = "".join((*start_move, *end_move)).lower()
+                self.render_board(start_move, end_move)
+
+                # update the server
+                self.web_socket.send(f"BOARD::MOVE::{move}")
+                try:
+                    data = [""]
+                    self.web_socket.send("BOARD::GET_BOARD")
+                    while data[0] != "BOARD":
+                        data = self.web_socket.recv().split("::")
+                    self.chess.set_fen(data[2])
+                except Exception:
+                    print(data)
+                    raise
+
+    def player_1_update(self) -> None:
+        """Function to get the latest FEN from the server after P2 makes a move."""
+        if not self.is_white_turn():  # the last move was made by black (p2)
+            new_board = False
+            while not new_board:  # wait till server broadcasts the new FEN string
+                data = self.web_socket.recv().split("::")
+                # todo add Waiting for enemy to make a move GUI here for player 1
+                if data[0] == "BOARD" and data[1] == "BOARD":
+                    if self.is_white_turn(data[2]):
+                        self.chess.set_fen(data[2])
+                        self.fen = self.chess.give_board()
+                        self.chess_board = self.fen_to_board(self.fen)
+                        for i in range(8):
+                            for j in range(8):
+                                self.update_block(i, j)
+                        new_board = True
+
+    def player_2_update(self) -> None:
+        """Function to get the latest FEN from the server after P1 makes a move."""
+        if self.is_white_turn():  # the last move was made by white (p1)
+            new_board = False
+            while not new_board:  # wait till server broadcasts the new FEN string
+                data = self.web_socket.recv().split("::")
+                # todo add Waiting for enemy to make a move GUI here for player 2
+                if data[0] == "BOARD" and data[1] == "BOARD":
+                    if not self.is_white_turn(data[2]):
+                        self.chess.set_fen(data[2])
+                        self.fen = self.chess.give_board()
+                        self.chess_board = self.fen_to_board(self.fen)
+                        for i in range(8):
+                            for j in range(8):
+                                self.update_block(i, j)
+                        new_board = True
+
+    def render_board(self, start_move: list, end_move: list) -> None:
+        """
+        Renders the board on the terminal.
+
+        updating only the place where the move was made and not the whole screen
+        """
+        #         with self.term.location(0, self.term.height - 10):
+        move = "".join((*start_move, *end_move)).lower()
+        self.chess.move_piece(move)
+        self.king_check = False
+        content = "WHITEs MOVE" if not self.is_white_turn() else "BLACKs MOVE"
+        self.print_message("STATUS", content=content)
+
+        self.fen = self.chess.give_board()
+        self.chess_board = self.fen_to_board(self.fen)
+        self.chess_status_display(
+            start="".join(start_move),
+            end="".join(end_move),
+            x_pos=COL.index(end_move[0].upper()),
+            y_pos=8 - int(end_move[1]),
+        )
+        if move in POSSIBLE_CASTLING_MOVES:
+            self.update_board()
+            return
+        self.update_block(len(self) - int(end_move[1]), COL.index(end_move[0].upper()))
+        self.update_block(
+            len(self) - int(start_move[1]), COL.index(start_move[0].upper())
+        )
+        self.moves_played += 1
+        if self.get_game_status() == CHESS_STATUS["CHECKMATE"]:
+            self.print_message(
+                "CHECKMATE. GAME OVER",
+                content="PRESS Q TO EXIT",
+            )
+            self.show_game_over()
+        elif self.get_game_status() == CHESS_STATUS["CHECK"]:
+            self.print_message("CHECK", content="PLAY YOUR KING")
+            self.highlight_check()
+            self.king_check = True
+
+        self.update_block(len(self) - int(end_move[1]), COL.index(end_move[0].upper()))
+        self.update_block(
+            len(self) - int(start_move[1]),
+            COL.index(start_move[0].upper()),
+        )
+        self.moves_played += 1
+
+        if self.moves_played % self.moves_limit == 0 and self.visible_layers > 2:
+            self.visible_layers -= 2
+            invisible_layers = (8 - self.visible_layers) // 2
+            self.hidden_layer[0:invisible_layers, :] = 0
+            self.hidden_layer[-invisible_layers:, :] = 0
+            self.hidden_layer[:, 0:invisible_layers] = 0
+            self.hidden_layer[:, -invisible_layers:] = 0
+            self.update_board()
 
     def update_block(self, row: int, col: int) -> None:
         """Updates block on row and col(we must first mutate actual list first)."""
@@ -669,33 +902,40 @@ class Game:
 
     @staticmethod
     def get_row_col(row: int, col: str) -> tuple:
-        """Returns row and col index."""
+        """Get the row and col index."""
         return (8 - int(row), COL.index(col.upper()))
 
     def get_possible_move(self, piece: str) -> list:
-        """Gives possible moves for specific piece."""
+        """Gives all possible moves for the given piece."""
         moves = self.chess.all_available_moves()
         piece = piece.lower()
         return [i for i in moves if piece in i]
 
-    def is_white_turn(self) -> bool:
+    def is_white_turn(self, fen: str = None) -> bool:
         """Returns if it's white's turn."""
-        fen_parts = self.fen.split(" ")
+        if fen:
+            fen_parts = fen.split(" ")
+        else:
+            fen_parts = self.fen.split(" ")
         return fen_parts[1] == "w"
 
     def highlight_moves(self, move: str) -> None:
         """Take a piece and highlights all possible moves."""
         old_moves = deepcopy(self.possible_moves)
         self.possible_moves = []
+
         # removes old moves
         for i in old_moves:
             self.update_block(i[0], i[1])
         if not move:
             return
+
         # highlights the possible moves.
         piece = self.chess_board[self.selected_row][self.selected_col]
         if piece == "em":
+            # If there are no possible moves for the piece
             return
+
         for i in self.get_possible_move("".join(move)):
             x = len(self) - int(i[3])
             y = COL.index(i[2].upper())
@@ -705,7 +945,9 @@ class Game:
     def handle_arrows(self) -> tuple:
         """Manages the arrow movement on board."""
         start_move = end_move = False
+
         while True:
+
             print(
                 self.term.color_rgb(100, 100, 100)
                 + self.term.move_xy(self.chat_box_x + 1, self.h - 2)
@@ -713,6 +955,7 @@ class Game:
             )
             with self.term.cbreak():
                 inp = self.term.inkey()
+
             if inp.name == "KEY_TAB":
                 self.chatbox()
             input_key = repr(inp)
@@ -721,21 +964,25 @@ class Game:
                     self.selected_row += 1
                     self.update_block(self.selected_row - 1, self.selected_col)
                     self.update_block(self.selected_row, self.selected_col)
+
             elif input_key == "KEY_UP":
                 if self.selected_row > 0:
                     self.selected_row -= 1
                     self.update_block(self.selected_row + 1, self.selected_col)
                     self.update_block(self.selected_row, self.selected_col)
+
             elif input_key == "KEY_LEFT":
                 if self.selected_col > 0:
                     self.selected_col -= 1
                     self.update_block(self.selected_row, self.selected_col + 1)
                     self.update_block(self.selected_row, self.selected_col)
+
             elif input_key == "KEY_RIGHT":
                 if self.selected_col < 7:
                     self.selected_col += 1
                     self.update_block(self.selected_row, self.selected_col - 1)
                     self.update_block(self.selected_row, self.selected_col)
+
             elif input_key == "KEY_ENTER":
                 move = self.chess_board[self.selected_row][self.selected_col]
                 if not start_move:
@@ -754,6 +1001,7 @@ class Game:
                         ROW[len(self) - self.selected_row - 1],
                     )
                     self.highlight_moves(start_move)
+
                 else:
                     if [self.selected_row, self.selected_col] in self.possible_moves:
                         end_move = (
@@ -790,6 +1038,11 @@ class Game:
             if self.king_check:
                 self.highlight_check()
 
+    def reset_class(self) -> None:
+        """Reset player game room info."""
+        self.game_id = None
+        self.player.player_id = None
+
     def start_game(self) -> None:
         """
         Starts the chess game.
@@ -801,25 +1054,32 @@ class Game:
             print(self.term.clear + self.term.exit_fullscreen)
         else:
             # call show_game_menu
-            menu_choice = self.show_game_menu()
-            if menu_choice == "NEW_LOBBY":
-                # make a new lobby
-                self.show_game_screen()
-            elif menu_choice == "CONNECT_TO_LOBBY":
-                # connect to a lobby
-                pass
-            elif menu_choice == "SETTINGS":
-                # open settings menu
-                pass
-            elif menu_choice == "EXIT":
-                # exit the game peacefully
-                print(self.term.clear + self.term.exit_fullscreen + self.term.clear)
-
-
-# self.chess_status_display(
-#     y_pos_box= int(self.h * 0.4),
-#     title="What bites?",
-#     content="What bites: Python",  ---->|usage of function
-#     box_width= 30,                        |chess_status_display(previously show_previous_move)
-#     is_last_move=False
-# )
+            menu_choice = "NO_EXIT"
+            while menu_choice != "EXIT":
+                if self.player:
+                    self.reset_class()
+                menu_choice = self.show_game_menu()
+                if menu_choice == "NEW_LOBBY":
+                    # make a new lobby
+                    print(self.create_lobby())
+                    resp = self.connect_to_lobby()
+                    if resp != "READY":
+                        print(resp)
+                elif menu_choice == "CONNECT_TO_LOBBY":
+                    # connect to a lobby
+                    resp = self.connect_to_lobby()
+                    if resp != "READY":
+                        print(resp)
+                elif menu_choice == "SETTINGS":
+                    # open settings menu
+                    pass
+                print(self.term.home + self.theme.background + self.term.clear)
+                if self.player.player_id:
+                    try:
+                        self.show_game_screen()
+                    except Exception as e:
+                        print(e)
+                        raise
+            # exit the game peacefully
+            self.web_socket.close()
+            print(self.term.clear + self.term.exit_fullscreen + self.term.clear)
