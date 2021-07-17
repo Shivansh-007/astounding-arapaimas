@@ -286,7 +286,7 @@ class Game:
             url = f"{self.api_url}/game/new"
 
             try:
-                resp = httpx.get(url, headers=self.headers, timeout=None)
+                resp = httpx.get(url, headers=self.headers)
                 if resp.status_code != 200:
                     return f"server returned Error code {resp.status_code}"
                 self.game_id = resp.json()["room"]
