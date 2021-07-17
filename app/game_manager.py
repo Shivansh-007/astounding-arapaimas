@@ -2,6 +2,7 @@ import json
 import logging
 import os.path
 import socket
+import sys
 from copy import deepcopy
 from typing import Optional
 
@@ -113,6 +114,37 @@ class Game:
 
     def __len__(self) -> int:
         return 8
+
+    @staticmethod
+    def supports_color() -> bool:
+        """Check whether the user's terminal supports colors."""
+
+        def vt_codes_enabled_in_windows_registry() -> bool:
+            """Check whether VT is enabled by default in Windows registry."""
+            try:
+                import winreg
+            except ImportError:
+                return False
+            else:
+                reg_key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, "Console")
+                try:
+                    reg_key_value, _ = winreg.QueryValueEx(
+                        reg_key, "VirtualTerminalLevel"
+                    )
+                except FileNotFoundError:
+                    return False
+                else:
+                    return reg_key_value == 1
+
+        is_a_tty = hasattr(sys.stdout, "isatty") and sys.stdout.isatty()
+
+        return is_a_tty and (
+            sys.platform != "win32"
+            or "ANSICON" in os.environ
+            or "WT_SESSION" in os.environ
+            or os.environ.get("TERM_PROGRAM") == "vscode"
+            or vt_codes_enabled_in_windows_registry()
+        )
 
     @staticmethod
     def check_network_connection(

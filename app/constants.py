@@ -6,6 +6,7 @@ from app import ascii_art
 
 load_dotenv()
 
+
 class WelcomeScreen:
     """Constants being used on the start welcome screen showing the upside down chess pieces."""
 
