@@ -203,6 +203,23 @@ class ChessNotifier:
         if web_socket in self.connections[room_name].values():
             await web_socket.send_text(message)
 
+    async def mark_game_over(self, _: WebSocket, user: str, game_id: int) -> None:
+        """Mark the `user` as the game winner and send game over message."""
+        game_obj = game.get_by_game_id(self.db, game_id=game_id)
+        game.mark_game_winner(
+            self.db,
+            game_id=game_id,
+            winner_id=game_obj.player_one_id
+            if user == "p1"
+            else game_obj.player_two_id,
+        )
+        for _, websocket in self.connections[str(game_id)].items():
+            await websocket.send_text(f"{BOARD_PREFIX}::OVER::{user}")
+
+        room_name = str(game_id)
+        del self.connections[room_name]
+        del self.chess_boards[room_name]
+
 
 notifier = ChessNotifier()
 
@@ -290,6 +307,14 @@ async def game_talking_endpoint(websocket: WebSocket, game_id: str) -> None:
                             f"{BOARD_PREFIX}::{BOARD_PREFIX}::{notifier.chess_boards[game_id].give_board()}",
                             game_id,
                         )  # reset board and send new FEN
+                    elif command == "SURRENDER":
+                        # value is the user who surrendered, e.g. SURRENDER::p1 i.e. p1 surrendered the game
+                        await notifier.mark_game_over(
+                            websocket, ("p2", "p1")[value == "p2"], int(game_id)
+                        )
+                    elif command == "WINNER":
+                        # value is the user who won the game e.g. WINNER::p2 i.e. p2 won the chess game
+                        await notifier.mark_game_over(websocket, value, int(game_id))
                     else:
                         log.debug(f"invalid command {command,value}")
                 except Chessnut.game.InvalidMove:
