@@ -41,6 +41,7 @@ class ColourScheme:
             "gm_exit_highlight": "bold_white_on_red",
             "gm_option_message": "green",
             "gm_message": "white",
+            "box_edges": "green3",
         },
         "mean_green": {
             "text": "green_on_black",

@@ -156,9 +156,11 @@ class Game:
         height, width = t.height, t.width
         midline = height // 2
         size_good = False
+        just_got_here = True
         while not size_good:
             if height >= min_height and width >= min_width:
-
+                if just_got_here:
+                    return
                 print(
                     t.clear
                     + t.move_y(midline)
@@ -194,7 +196,76 @@ class Game:
                     pass
                 width = t.width
             midline = height // 2
+            just_got_here = False
         return
+
+    def user_input(self, message: str) -> str:
+        """Draw a popup where user's may input requested information."""
+        padding = 2
+        popup_width = (text_len := max(len(message), 54)) + padding * 4
+        popup_height = 1 + 1 + 3 + 3
+        t = self.term
+        center_x, center_y = t.width // 2, t.height // 2 + 1
+        with t.cbreak(), t.hidden_cursor(), t.fullscreen():
+            start_x, start_y = (
+                a - b // 2
+                for a, b in zip((center_x, center_y), (popup_width, popup_height))
+            )
+            print(t.move_xy(start_x, start_y), end="")
+            for j in range(0, popup_height):
+                if j == 0 or j == popup_height - 1:
+                    print(f"{self.theme.box_edges}█" * popup_width, end="")
+                else:
+                    print(
+                        f"{self.theme.box_edges}█" * 2,
+                        t.move_xy(start_x + popup_width - 3, start_y + j),
+                        f"{self.theme.box_edges}█" * 2,
+                        end="",
+                    )
+                    if t.get_location()[0] == center_y:
+                        print(
+                            t.move_xy(start_x + 2, center_y - 1),
+                            t.center(f"{t.normal}{message}", width=popup_width - 5),
+                            sep="",
+                        )
+                print(t.move_xy(start_x, start_y + j + 1), end="")
+            given_input = ""
+            print(
+                t.move_xy(start_x + 2, cur_y := center_y + 1),
+                t.normal_cursor,
+                end="",
+            )
+            while True:
+                key = t.inkey()
+                if not key:
+                    continue
+                elif key.is_sequence and (
+                    key.name == "KEY_BACKSPACE" or key.name == "KEY_DELETE"
+                ):
+                    if len(given_input) != 0:
+                        given_input = given_input[:-1]
+                        print(t.move_yx(cur_y, t.get_location()[1] - 1), end=" ")
+                        print(t.move_yx(cur_y, t.get_location()[1] - 1), end="")
+                    else:
+                        continue
+
+                elif key.name == "KEY_ENTER":
+                    break
+                elif key:
+                    given_input += key
+                    prnt_str = given_input
+                    if len(prnt_str) < text_len:
+                        print(f"{self.theme.text}{prnt_str[-1]}", t.move_left, end="")
+                    else:
+                        prnt_str = "..." + prnt_str[-(text_len - 2) :]
+                        print(
+                            t.move_xy(start_x + 2, cur_y := center_y + 1),
+                            f"{self.theme.text}{prnt_str}",
+                            # t.move_left,
+                            end="",
+                        )
+
+        return given_input
 
     def ask_or_get_token(self) -> str:
         """
@@ -214,14 +285,16 @@ class Game:
 
         # If cache file is not found
         token_ok = False
-        token = input("Enter your API token")
+        token = self.user_input("Enter your API token").strip()
         while not token_ok:
             r = httpx.put(
                 f"http{self.secure}://{self.server}{self.port}/validate_token",
                 json={"token": token},
             )
             if r.status_code != 200:
-                token = input("Invalid token, enter the correct one: ")
+                token = self.user_input(
+                    "Invalid token, enter the correct one: "
+                ).strip()
             else:
                 token_ok = True
 
@@ -274,7 +347,7 @@ class Game:
     def connect_to_lobby(self) -> str:
         """Connect to a lobby after Creating one or with game_id."""
         if not self.game_id:
-            self.game_id = input("Enter Game id :- ").strip()
+            self.game_id = self.user_input("Enter Game id :- ").strip()
         if not self.player:
             self.player = Player(self.ask_or_get_token())
             self.headers = {"Authorization": f"Bearer {self.player.token}"}
