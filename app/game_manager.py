@@ -126,8 +126,8 @@ class Game:
     def __len__(self) -> int:
         return 8
 
+    @staticmethod
     def check_network_connection(
-        self,
         host: Optional[str] = "8.8.8.8",
         port: Optional[int] = 53,
         timeout: Optional[int] = 3,
@@ -192,6 +192,8 @@ class Game:
         """Used to create a game lobby on the server or locally."""
         if not self.game_id:
             try:
+                if not self.check_network_connection():
+                    return f"{self.term.blink}Can't connect to internet"
                 httpx.get(f"http{self.secure}://{self.server}{self.port}/")
             except httpx.ConnectError:
                 return f"{self.term.blink}Can't connect to  {self.server}"
@@ -503,55 +505,14 @@ class Game:
             while True:
                 # available_moves = chessboard.all_available_moves()
                 # get the latest board
-                if self.player.player_id == 1 and not self.is_white_turn():
-                    new_board = False
-                    while not new_board:
-                        data = self.web_socket.recv().split("::")
-                        if data[0] == "BOARD" and data[1] == "BOARD":
-                            if self.is_white_turn(data[2]):
-                                self.chess.set_fen(data[2])
-                                self.fen = self.chess.give_board()
-                                new_board = True
-
-                if self.player.player_id == 2 and self.is_white_turn():
-                    new_board = False
-                    while not new_board:
-                        data = self.web_socket.recv().split("::")
-                        if data[0] == "BOARD" and data[1] == "BOARD":
-                            if not self.is_white_turn(data[2]):
-                                self.chess.set_fen(data[2])
-                                self.fen = self.chess.give_board()
-                                new_board = True
+                if self.player.player_id == 1:
+                    self.player_1_update()
+                elif self.player.player_id == 2:
+                    self.player_2_update()
 
                 start_move, end_move = self.handle_arrows()
-
-                with self.term.location(0, self.term.height - 10):
-                    move = "".join((*start_move, *end_move)).lower()
-                    self.chess.move_piece(move)
-                    self.fen = self.chess.give_board()
-                    self.chess_board = self.fen_to_board(self.fen)
-                self.update_block(
-                    len(self) - int(end_move[1]), COL.index(end_move[0].upper())
-                )
-                self.update_block(
-                    len(self) - int(start_move[1]),
-                    COL.index(start_move[0].upper()),
-                )
-                self.moves_played += 1
-
-                if (
-                    self.moves_played % self.moves_limit == 0
-                    and self.visible_layers > 2
-                ):
-                    self.visible_layers -= 2
-                    invisible_layers = (8 - self.visible_layers) // 2
-                    self.hidden_layer[0:invisible_layers, :] = 0
-                    self.hidden_layer[-invisible_layers:, :] = 0
-                    self.hidden_layer[:, 0:invisible_layers] = 0
-                    self.hidden_layer[:, -invisible_layers:] = 0
-                    for i in range(8):
-                        for j in range(8):
-                            self.update_block(i, j)
+                move = "".join((*start_move, *end_move)).lower()
+                self.render_board(start_move, end_move)
 
                 # update the server
                 self.web_socket.send(f"BOARD::MOVE::{move}")
@@ -564,6 +525,69 @@ class Game:
                 except Exception:
                     print(data)
                     raise
+
+    def player_1_update(self) -> None:
+        """Function to get the latest FEN from the server after P2 makes a move."""
+        if not self.is_white_turn():  # the last move was made by black (p2)
+            new_board = False
+            while not new_board:  # wait till server broadcasts the new FEN string
+                data = self.web_socket.recv().split("::")
+                # todo add Waiting for enemy to make a move GUI here for player 1
+                if data[0] == "BOARD" and data[1] == "BOARD":
+                    if self.is_white_turn(data[2]):
+                        self.chess.set_fen(data[2])
+                        self.fen = self.chess.give_board()
+                        self.chess_board = self.fen_to_board(self.fen)
+                        for i in range(8):
+                            for j in range(8):
+                                self.update_block(i, j)
+                        new_board = True
+
+    def player_2_update(self) -> None:
+        """Function to get the latest FEN from the server after P1 makes a move."""
+        if self.is_white_turn():  # the last move was made by white (p1)
+            new_board = False
+            while not new_board:  # wait till server broadcasts the new FEN string
+                data = self.web_socket.recv().split("::")
+                # todo add Waiting for enemy to make a move GUI here for player 2
+                if data[0] == "BOARD" and data[1] == "BOARD":
+                    if not self.is_white_turn(data[2]):
+                        self.chess.set_fen(data[2])
+                        self.fen = self.chess.give_board()
+                        self.chess_board = self.fen_to_board(self.fen)
+                        for i in range(8):
+                            for j in range(8):
+                                self.update_block(i, j)
+                        new_board = True
+
+    def render_board(self, start_move: list, end_move: list) -> None:
+        """
+        Renders the board on the terminal.
+
+        updating only the place where the move was made and not the whole screen
+        """
+        with self.term.location(0, self.term.height - 10):
+            move = "".join((*start_move, *end_move)).lower()
+            self.chess.move_piece(move)
+            self.fen = self.chess.give_board()
+            self.chess_board = self.fen_to_board(self.fen)
+        self.update_block(len(self) - int(end_move[1]), COL.index(end_move[0].upper()))
+        self.update_block(
+            len(self) - int(start_move[1]),
+            COL.index(start_move[0].upper()),
+        )
+        self.moves_played += 1
+
+        if self.moves_played % self.moves_limit == 0 and self.visible_layers > 2:
+            self.visible_layers -= 2
+            invisible_layers = (8 - self.visible_layers) // 2
+            self.hidden_layer[0:invisible_layers, :] = 0
+            self.hidden_layer[-invisible_layers:, :] = 0
+            self.hidden_layer[:, 0:invisible_layers] = 0
+            self.hidden_layer[:, -invisible_layers:] = 0
+            for i in range(8):
+                for j in range(8):
+                    self.update_block(i, j)
 
     def update_block(self, row: int, col: int) -> None:
         """Updates block on row and col(we must first mutate actual list first)."""
