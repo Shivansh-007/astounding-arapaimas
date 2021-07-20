@@ -66,7 +66,7 @@ The project can be started by running it directly on your system.The environment
 
     First, start the PostgreSQL database.
     Note that this can still be done with Docker even if the webserver will be running on the host - simply adjust the `DATABASE_URL` environment variable accordingly.
-    
+
 - **Migrations**
 
     Once the Database is started, you need run migrations to init tables and columns which can be ran through `alembic upgrade heads`, but I would say it would be better to run `poetry run bash scripts/prestart.sh`
