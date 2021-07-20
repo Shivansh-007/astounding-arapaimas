@@ -10,6 +10,10 @@ By Astounding Arapaimas - [@p0lygun](https://github.com/p0lygun),
 ## Introduction
 ...
 
+If you're looking to play around with the code,
+or run the awesome chess TUI app then
+take a look at the [`docs` directory](docs).
+
 ## Features
 ...
 
