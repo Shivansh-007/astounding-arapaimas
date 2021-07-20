@@ -40,6 +40,25 @@ The API is configured through the following environment variables:
 
 - **`JWT_SECRET`**: A 32 byte (64 digit hex string) secret for encoding tokens. Any value can be used.
 
+- **`API_URL`**: The URL hosting the API, if you are running with docker or poetry, it is most likely to `http://127.0.0.1:8000`
+
+- **`WEBSOCKET_URL`**: The URL hosting the API but with websocket schema, which is most likely to be `ws://127.0.0.1:8000`, in-case you are using external services which have `https` enabled then make sure to use `wss` in the URL.
+
+ - **Example `.env`**
+    ```env
+    CLIENT_ID="863943137139621908"
+    CLIENT_SECRET="TheUltimateClientSecretMadeByDiscord"
+    JWT_SECRET="c78f1d852e2d5adefc2bc54ed256c5b0c031df81aef21a1ae1720e7f72c2d39"
+
+    AUTH_URL="https://discord.com/api/oauth2/authorize?client_id=863943137139621908&redirect_uri=http%3A%2F%2F127.0.0.1%3A8000%2Fcallback&response_type=code&scope=identify"
+
+    LOG_LEVEL="debug"
+
+    DATABASE_URL="postgresql://arapaimas:arapaimas@localhost:7777/arapaimas"
+    API_URL="http://127.0.0.1:8000"
+    WEBSOCKET_URL="ws://127.0.0.1:8000"
+    ```
+
 ### **3. Run The API**
 The project can be started by running it directly on your system.The environment variables shown in a previous section need to have been configured.
 
@@ -47,6 +66,10 @@ The project can be started by running it directly on your system.The environment
 
     First, start the PostgreSQL database.
     Note that this can still be done with Docker even if the webserver will be running on the host - simply adjust the `DATABASE_URL` environment variable accordingly.
+
+- **Migrations**
+
+    Once the Database is started, you need run migrations to init tables and columns which can be ran through `alembic upgrade heads`, but I would say it would be better to run `poetry run bash scripts/prestart.sh`
 
 - **Webserver**
 
