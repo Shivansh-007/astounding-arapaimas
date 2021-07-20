@@ -8,7 +8,7 @@ By Astounding Arapaimas - [@p0lygun](https://github.com/p0lygun),
 [@hp77-creator](https://github.com/hp77-creator)
 
 ## Introduction
-Stealth chess is an iterated version of the [classcic chess game](https://en.wikipedia.org/wiki/Chess)
+Stealth chess is an iterated version of the [classic chess game](https://en.wikipedia.org/wiki/Chess)
 which played among 2 players. This is similar to that but there is a twist,
 after every move the visible portion of the board changes and the player
 can only choose the options which are visible to them and cannot play the
@@ -21,7 +21,6 @@ p1 can see all the pieces of p2 as a normal chess game but they can only
 see the "visible" pieces of their side of the board, similar happens for p2
 during their chance. This invisible area keeps changes turn by turn and
 sometimes it becomes kind and shows you all the pieces (but not too kind).
-
 
 
 If you're looking to play around with the code,
