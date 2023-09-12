@@ -79,7 +79,6 @@ class ColourScheme:
 
 
 if __name__ == "__main__":
-
     term = Terminal()
     theme_1 = ColourScheme(term, theme="default")
     theme_2 = ColourScheme(term, theme="mean_green")
