@@ -181,7 +181,6 @@ class Game:
         size_good = False
         while not size_good:
             if height >= min_height and width >= min_width:
-
                 print(
                     t.clear
                     + t.move_y(midline)
@@ -401,6 +400,7 @@ class Game:
         Create Game, Join Game, settings and exit. Each have a description which
         can be rendered on pressing `KEY_TAB`.
         """
+
         # print all game menu options
         def print_options() -> None:
             for i, option in enumerate(
